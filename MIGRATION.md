@@ -2,11 +2,11 @@
 
 This is a migration guide for all major version bumps
 
-## v2.0
+## v1 -> v2
 
 TODO: New library
 
-## v0-v1
+## v0 -> v1
 
 When we stabilized our library, we decided to pull some breaking changes, here are they and how you can migrate:
 
