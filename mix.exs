@@ -1,7 +1,7 @@
 defmodule PostHog.MixProject do
   use Mix.Project
 
-  @version "1.1.0"
+  @version "2.0.0"
   @source_url "https://github.com/posthog/posthog-elixir"
 
   def project do
