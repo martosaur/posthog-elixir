@@ -4,19 +4,29 @@ defmodule PostHog.Application do
   use Application
 
   def start(_type, _args) do
+    {conv_config, supervisor_config} = PostHog.Config.read!()
+
     children =
-      case PostHog.Config.read!() do
-        {%{enable: true, enable_error_tracking: error_tracking}, config} ->
-          if error_tracking do
-            :logger.add_handler(:posthog, PostHog.Handler, %{config: config})
-          end
+      if conv_config.enable do
+        if conv_config.enable_error_tracking do
+          :logger.add_handler(:posthog, PostHog.Handler, %{config: supervisor_config})
+        end
 
-          [{PostHog.Supervisor, config}]
-
-        _ ->
-          []
+        [{PostHog.Supervisor, supervisor_config}]
+      else
+        []
       end
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: __MODULE__)
+    ownership_children =
+      if conv_config.test_mode do
+        [{NimbleOwnership, name: PostHog.Ownership}]
+      else
+        []
+      end
+
+    Supervisor.start_link(children ++ ownership_children,
+      strategy: :one_for_one,
+      name: __MODULE__
+    )
   end
 end

@@ -10,7 +10,10 @@ defmodule PostHog.SenderTest do
 
   setup_all do
     start_link_supervised!(
-      {Registry, keys: :unique, name: PostHog.Registry.registry_name(@supervisor_name)}
+      {Registry,
+       keys: :unique,
+       name: PostHog.Registry.registry_name(@supervisor_name),
+       meta: [config: %{test_mode: false}]}
     )
 
     %{api_client: %API.Client{client: :fake_client, module: API.Mock}}

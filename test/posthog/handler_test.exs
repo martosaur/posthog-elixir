@@ -9,11 +9,14 @@ defmodule PostHog.HandlerTest do
   setup :setup_supervisor
   setup :setup_logger_handler
 
-  test "takes distinct_id from metadata", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "takes distinct_id from metadata", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     Logger.info("Hello World", distinct_id: "foo")
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -30,11 +33,14 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "always exports global context", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "always exports global context", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     Logger.info("Hello World")
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -53,19 +59,25 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag config: [capture_level: :warning]
-  test "ignores messages lower than capture_level", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "ignores messages lower than capture_level", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     Logger.info("Hello World")
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: []} = :sys.get_state(sender_pid)
+    assert [] = all_captured(supervisor_name)
   end
 
   @tag config: [capture_level: :warning]
-  test "logs with crash reason always captured", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "logs with crash reason always captured", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     Logger.debug("Hello World", crash_reason: {"exit reason", []})
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -81,11 +93,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "string message", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "string message", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.string_message()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -101,11 +113,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "charlist message", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "charlist message", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.charlist_message()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -121,11 +133,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "chardata message", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "chardata message", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.chardata_message(:proper)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -141,11 +153,14 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "chardata message - improper", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "chardata message - improper", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.chardata_message(:improper)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -161,11 +176,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "io format", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "io format", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.io_format()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -181,11 +196,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "keyword report", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "keyword report", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.keyword_report()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -201,11 +216,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "map report", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "map report", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.map_report()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -221,11 +236,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "struct report", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "struct report", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.struct_report()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -241,11 +256,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "task error exception", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "task error exception", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.task_error(:exception)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -284,11 +299,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "task error throw", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "task error throw", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.task_error(:throw)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -327,11 +342,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "task error exit", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "task error exit", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.task_error(:exit)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -370,11 +385,14 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "genserver crash exception", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "genserver crash exception", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.genserver_crash(:exception)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -431,11 +449,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "genserver crash exit", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "genserver crash exit", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.genserver_crash(:exit)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -492,11 +510,14 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "genserver crash exit with struct", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "genserver crash exit with struct", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.genserver_crash(:exit_with_struct)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -512,11 +533,11 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "genserver crash throw", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "genserver crash throw", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.genserver_crash(:throw)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -532,11 +553,14 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "gen_state_m crash exception", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "gen_state_m crash exception", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.gen_statem_crash(:exception)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -587,12 +611,15 @@ defmodule PostHog.HandlerTest do
   test "bare process crash exception", %{
     handler_id: handler_id,
     handler_ref: ref,
-    sender_pid: sender_pid
+    config: %{supervisor_name: supervisor_name}
   } do
+    # We use this call to initialize key ownership. LoggerHandlerKit will share
+    # ownership to PostHog.Ownership server, but the key has to be initialized.
+    all_captured(supervisor_name)
     LoggerHandlerKit.Act.bare_process_crash(handler_id, :exception)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -625,12 +652,15 @@ defmodule PostHog.HandlerTest do
   test "bare process crash throw", %{
     handler_id: handler_id,
     handler_ref: ref,
-    sender_pid: sender_pid
+    config: %{supervisor_name: supervisor_name}
   } do
+    # We use this call to initialize key ownership. LoggerHandlerKit will share
+    # ownership to PostHog.Ownership server, but the key has to be initialized.
+    all_captured(supervisor_name)
     LoggerHandlerKit.Act.bare_process_crash(handler_id, :throw)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -661,11 +691,11 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag handle_sasl_reports: true
-  test "genserver init crash", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "genserver init crash", %{handler_ref: ref, config: %{supervisor_name: supervisor_name}} do
     LoggerHandlerKit.Act.genserver_init_crash()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -724,11 +754,14 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag handle_sasl_reports: true
-  test "proc_lib crash exception", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "proc_lib crash exception", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.proc_lib_crash(:exception)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -770,12 +803,12 @@ defmodule PostHog.HandlerTest do
   @tag handle_sasl_reports: true
   test "supervisor progress report failed to start child", %{
     handler_ref: ref,
-    sender_pid: sender_pid
+    config: %{supervisor_name: supervisor_name}
   } do
     LoggerHandlerKit.Act.supervisor_progress_report(:failed_to_start_child)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -795,11 +828,14 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag handle_sasl_reports: true, config: [capture_level: :debug]
-  test "supervisor progress report child started", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "supervisor progress report child started", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.supervisor_progress_report(:child_started)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -819,13 +855,19 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag handle_sasl_reports: true
-  test "supervisor progress report child terminated", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "supervisor progress report child terminated", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
+    # We use this call to initialize key ownership. LoggerHandlerKit will share
+    # ownership to PostHog.Ownership server, but the key has to be initialized.
+    all_captured(supervisor_name)
     LoggerHandlerKit.Act.supervisor_progress_report(:child_terminated)
     LoggerHandlerKit.Assert.assert_logged(ref)
     LoggerHandlerKit.Assert.assert_logged(ref)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [_, _, _] = events} = :sys.get_state(sender_pid)
+    assert [_, _, _] = events = all_captured(supervisor_name)
 
     for event <- events do
       assert %{
@@ -849,11 +891,14 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag config: [metadata: [:extra]]
-  test "exports metadata if configured", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "exports metadata if configured", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     Logger.error("Error with metadata", extra: "Foo", hello: "world")
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -871,12 +916,15 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag config: [metadata: [:extra]]
-  test "ensures metadata is serializable", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "ensures metadata is serializable", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.metadata_serialization(:all)
     LoggerHandlerKit.Act.string_message()
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -909,16 +957,12 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag config: [metadata: [:extra]]
-  test "purposefully set context is always exported", %{
-    config: config,
-    handler_ref: ref,
-    sender_pid: sender_pid
-  } do
+  test "purposefully set context is always exported", %{config: config, handler_ref: ref} do
     PostHog.set_context(config.supervisor_name, %{foo: "bar"})
     Logger.error("Error with metadata", hello: "world")
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(config.supervisor_name)
 
     assert %{
              event: "$exception",
@@ -935,11 +979,14 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
-  test "erlang frames in stacktrace", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "erlang frames in stacktrace", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     {:ok, _pid} = Task.start(fn -> :erlang.system_time(:foo) end)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",
@@ -972,11 +1019,14 @@ defmodule PostHog.HandlerTest do
   end
 
   @tag config: [in_app_otp_apps: [:logger_handler_kit]]
-  test "marks in_app frames as such", %{handler_ref: ref, sender_pid: sender_pid} do
+  test "marks in_app frames as such", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
     LoggerHandlerKit.Act.task_error(:exception)
     LoggerHandlerKit.Assert.assert_logged(ref)
 
-    assert %{events: [event]} = :sys.get_state(sender_pid)
+    assert [event] = all_captured(supervisor_name)
 
     assert %{
              event: "$exception",

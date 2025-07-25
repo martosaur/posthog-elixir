@@ -27,8 +27,16 @@ defmodule PostHog.Sender do
 
   def send(event, supervisor_name) do
     supervisor_name
-    |> PostHog.Registry.via(__MODULE__)
-    |> GenServer.cast({:event, event})
+    |> PostHog.Registry.config()
+    |> case do
+      %{test_mode: true} ->
+        PostHog.Test.remember_event(supervisor_name, event)
+
+      _ ->
+        supervisor_name
+        |> PostHog.Registry.via(__MODULE__)
+        |> GenServer.cast({:event, event})
+    end
   end
 
   # Callbacks

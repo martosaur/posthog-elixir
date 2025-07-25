@@ -49,7 +49,8 @@ defmodule PostHog.MixProject do
       },
       extras: ["README.md", "CHANGELOG.md", "MIGRATION.md", "guides/advanced-configuration.md"],
       groups_for_modules: [
-        Integrations: [PostHog.Integrations.Plug]
+        Integrations: [PostHog.Integrations.Plug],
+        Testing: [PostHog.Test]
       ],
       skip_undefined_reference_warnings_on: ["CHANGELOG.md", "MIGRATION.md"]
     ]
@@ -60,9 +61,14 @@ defmodule PostHog.MixProject do
       {:nimble_options, "~> 1.1"},
       {:req, "~> 0.5.10"},
       {:logger_json, "~> 7.0"},
+      {:nimble_ownership, "~> 1.0"},
       # Development tools
       {:ex_doc, "~> 0.37", only: :dev, runtime: false},
-      {:logger_handler_kit, "~> 0.3", only: :test},
+      # {:logger_handler_kit, "~> 0.3", only: :test},
+      {:logger_handler_kit,
+       git: "https://github.com/martosaur/logger_handler_kit",
+       branch: "am-share-ownership-to",
+       only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mox, "~> 1.1", only: :test}
     ]

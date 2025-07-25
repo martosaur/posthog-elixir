@@ -4,6 +4,7 @@ defmodule PostHog.Case do
   using do
     quote do
       import PostHog.Case
+      import PostHog.Test, only: [all_captured: 1, all_captured: 0]
     end
   end
 
@@ -15,8 +16,9 @@ defmodule PostHog.Case do
         public_url: "https://us.i.posthog.com",
         api_key: "my_api_key",
         api_client_module: PostHog.API.Mock,
-        supervisor_name: context.test,
-        capture_level: :info
+        supervisor_name: context[:test],
+        capture_level: :info,
+        test_mode: true
       ]
       |> Keyword.merge(context[:config] || [])
       |> PostHog.Config.validate!()
@@ -34,7 +36,10 @@ defmodule PostHog.Case do
   end
 
   def setup_logger_handler(%{config: config} = context) do
-    big_config_override = Map.take(context, [:handle_otp_reports, :handle_sasl_reports, :level])
+    big_config_override =
+      context
+      |> Map.take([:handle_otp_reports, :handle_sasl_reports, :level])
+      |> Map.put(:share_ownership_with, [PostHog.Ownership])
 
     {context, on_exit} =
       LoggerHandlerKit.Arrange.add_handler(

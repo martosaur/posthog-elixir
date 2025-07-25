@@ -22,10 +22,10 @@ defmodule PostHogTest do
   end
 
   describe "bare_capture/4" do
-    test "simple call", %{sender_pid: sender_pid} do
+    test "simple call" do
       PostHog.bare_capture("case tested", "distinct_id")
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured()
 
       assert %{
                event: "case tested",
@@ -35,10 +35,10 @@ defmodule PostHogTest do
              } = event
     end
 
-    test "with properties", %{sender_pid: sender_pid} do
+    test "with properties" do
       PostHog.bare_capture("case tested", "distinct_id", %{foo: "bar"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured()
 
       assert %{
                event: "case tested",
@@ -49,10 +49,10 @@ defmodule PostHogTest do
     end
 
     @tag config: [supervisor_name: CustomPostHog]
-    test "simple call for custom supervisor", %{sender_pid: sender_pid} do
+    test "simple call for custom supervisor" do
       PostHog.bare_capture(CustomPostHog, "case tested", "distinct_id")
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(CustomPostHog)
 
       assert %{
                event: "case tested",
@@ -63,10 +63,10 @@ defmodule PostHogTest do
     end
 
     @tag config: [supervisor_name: CustomPostHog]
-    test "with properties for custom supervisor", %{sender_pid: sender_pid} do
+    test "with properties for custom supervisor" do
       PostHog.bare_capture(CustomPostHog, "case tested", "distinct_id", %{foo: "bar"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(CustomPostHog)
 
       assert %{
                event: "case tested",
@@ -76,11 +76,11 @@ defmodule PostHogTest do
              } = event
     end
 
-    test "ignores set context but uses global one from the config", %{sender_pid: sender_pid} do
+    test "ignores set context but uses global one from the config" do
       PostHog.set_context(%{hello: "world"})
       PostHog.bare_capture("case tested", "distinct_id", %{foo: "bar"})
 
-      assert %{events: [%{properties: properties}]} = :sys.get_state(sender_pid)
+      assert [%{properties: properties}] = all_captured()
 
       assert %{foo: "bar", "$lib": "posthog-elixir", "$lib_version": _} = properties
       refute properties[:hello]
@@ -88,10 +88,10 @@ defmodule PostHogTest do
   end
 
   describe "capture/4" do
-    test "simple call", %{sender_pid: sender_pid} do
+    test "simple call" do
       PostHog.capture("case tested", %{distinct_id: "distinct_id"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured()
 
       assert %{
                event: "case tested",
@@ -105,10 +105,10 @@ defmodule PostHogTest do
       assert {:error, :missing_distinct_id} = PostHog.capture("case tested")
     end
 
-    test "with properties", %{sender_pid: sender_pid} do
+    test "with properties" do
       PostHog.capture("case tested", %{distinct_id: "distinct_id", foo: "bar"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured()
 
       assert %{
                event: "case tested",
@@ -119,10 +119,10 @@ defmodule PostHogTest do
     end
 
     @tag config: [supervisor_name: CustomPostHog]
-    test "simple call for custom supervisor", %{sender_pid: sender_pid} do
+    test "simple call for custom supervisor" do
       PostHog.capture(CustomPostHog, "case tested", %{distinct_id: "distinct_id"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(CustomPostHog)
 
       assert %{
                event: "case tested",
@@ -133,10 +133,10 @@ defmodule PostHogTest do
     end
 
     @tag config: [supervisor_name: CustomPostHog]
-    test "with properties for custom supervisor", %{sender_pid: sender_pid} do
+    test "with properties for custom supervisor" do
       PostHog.capture(CustomPostHog, "case tested", %{distinct_id: "distinct_id", foo: "bar"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(CustomPostHog)
 
       assert %{
                event: "case tested",
@@ -146,13 +146,13 @@ defmodule PostHogTest do
              } = event
     end
 
-    test "includes relevant event context", %{sender_pid: sender_pid} do
+    test "includes relevant event context" do
       PostHog.set_context(%{hello: "world", distinct_id: "distinct_id"})
       PostHog.set_event_context("case tested", %{foo: "bar"})
       PostHog.set_context(MyPostHog, %{spam: "eggs"})
       PostHog.capture("case tested", %{final: "override"})
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured()
 
       assert %{
                event: "case tested",
