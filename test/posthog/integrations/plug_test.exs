@@ -3,7 +3,8 @@ defmodule PostHog.Integrations.PlugTest do
   # https://github.com/erlang/otp/issues/9997 is fixed
   use PostHog.Case, async: false
 
-  @moduletag capture_log: true, config: [capture_level: :error]
+  @supervisor_name __MODULE__
+  @moduletag capture_log: true, config: [capture_level: :error, supervisor_name: @supervisor_name]
 
   setup {LoggerHandlerKit.Arrange, :ensure_per_handler_translation}
   setup :setup_supervisor
@@ -32,13 +33,19 @@ defmodule PostHog.Integrations.PlugTest do
            }
   end
 
+  setup do
+    # We use this call to initialize key ownership. LoggerHandlerKit will share
+    # ownership to PostHog.Ownership server, but the key has to be initialized.
+    all_captured(@supervisor_name)
+  end
+
   describe "Bandit" do
-    test "context is attached to exceptions", %{handler_ref: ref, sender_pid: sender_pid} do
+    test "context is attached to exceptions", %{handler_ref: ref} do
       LoggerHandlerKit.Act.plug_error(:exception, Bandit, MyRouter)
       LoggerHandlerKit.Assert.assert_logged(ref)
       LoggerHandlerKit.Assert.assert_logged(ref)
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(@supervisor_name)
 
       assert %{
                event: "$exception",
@@ -63,12 +70,12 @@ defmodule PostHog.Integrations.PlugTest do
              } = properties
     end
 
-    test "context is attached to throws", %{handler_ref: ref, sender_pid: sender_pid} do
+    test "context is attached to throws", %{handler_ref: ref} do
       LoggerHandlerKit.Act.plug_error(:throw, Bandit, MyRouter)
       LoggerHandlerKit.Assert.assert_logged(ref)
       LoggerHandlerKit.Assert.assert_logged(ref)
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(@supervisor_name)
 
       assert %{
                event: "$exception",
@@ -93,12 +100,12 @@ defmodule PostHog.Integrations.PlugTest do
              } = properties
     end
 
-    test "context is attached to exit", %{handler_ref: ref, sender_pid: sender_pid} do
+    test "context is attached to exit", %{handler_ref: ref} do
       LoggerHandlerKit.Act.plug_error(:exit, Bandit, MyRouter)
       LoggerHandlerKit.Assert.assert_logged(ref)
       LoggerHandlerKit.Assert.assert_logged(ref)
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(@supervisor_name)
 
       assert %{
                event: "$exception",
@@ -124,11 +131,11 @@ defmodule PostHog.Integrations.PlugTest do
   end
 
   describe "Cowboy" do
-    test "context is attached to exceptions", %{handler_ref: ref, sender_pid: sender_pid} do
+    test "context is attached to exceptions", %{handler_ref: ref} do
       LoggerHandlerKit.Act.plug_error(:exception, Plug.Cowboy, MyRouter)
       LoggerHandlerKit.Assert.assert_logged(ref)
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(@supervisor_name)
 
       assert %{
                event: "$exception",
@@ -153,11 +160,11 @@ defmodule PostHog.Integrations.PlugTest do
              } = properties
     end
 
-    test "context is attached to throws", %{handler_ref: ref, sender_pid: sender_pid} do
+    test "context is attached to throws", %{handler_ref: ref} do
       LoggerHandlerKit.Act.plug_error(:throw, Plug.Cowboy, MyRouter)
       LoggerHandlerKit.Assert.assert_logged(ref)
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(@supervisor_name)
 
       assert %{
                event: "$exception",
@@ -182,11 +189,11 @@ defmodule PostHog.Integrations.PlugTest do
              } = properties
     end
 
-    test "context is attached to exit", %{handler_ref: ref, sender_pid: sender_pid} do
+    test "context is attached to exit", %{handler_ref: ref} do
       LoggerHandlerKit.Act.plug_error(:exit, Plug.Cowboy, MyRouter)
       LoggerHandlerKit.Assert.assert_logged(ref)
 
-      assert %{events: [event]} = :sys.get_state(sender_pid)
+      assert [event] = all_captured(@supervisor_name)
 
       assert %{
                event: "$exception",

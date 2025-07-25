@@ -54,8 +54,16 @@ defmodule PostHog.Config do
     ]
   ]
 
-  @compiled_configuration_schema NimbleOptions.new!(@configuration_schema)
-  @compiled_convenience_schema NimbleOptions.new!(@convenience_schema)
+  @shared_schema [
+    test_mode: [
+      type: :boolean,
+      default: false,
+      doc: "Test mode allows tests assert captured events."
+    ]
+  ]
+
+  @compiled_configuration_schema NimbleOptions.new!(@configuration_schema ++ @shared_schema)
+  @compiled_convenience_schema NimbleOptions.new!(@convenience_schema ++ @shared_schema)
 
   @moduledoc """
   PostHog configuration
@@ -87,17 +95,23 @@ defmodule PostHog.Config do
   @doc false
   def read!() do
     configuration_options =
-      Application.get_all_env(:posthog) |> Keyword.take(Keyword.keys(@configuration_schema))
+      Application.get_all_env(:posthog)
+      |> Keyword.take(Keyword.keys(@configuration_schema ++ @shared_schema))
 
     convenience_options =
-      Application.get_all_env(:posthog) |> Keyword.take(Keyword.keys(@convenience_schema))
+      Application.get_all_env(:posthog)
+      |> Keyword.take(Keyword.keys(@convenience_schema ++ @shared_schema))
 
-    with %{enable: true} = conv <-
-           convenience_options
-           |> NimbleOptions.validate!(@compiled_convenience_schema)
-           |> Map.new() do
-      config = validate!(configuration_options)
-      {conv, config}
+    convenience_options
+    |> NimbleOptions.validate!(@compiled_convenience_schema)
+    |> Map.new()
+    |> case do
+      %{enable: true} = conv ->
+        config = validate!(configuration_options)
+        {conv, config}
+
+      conv ->
+        {conv, nil}
     end
   end
 

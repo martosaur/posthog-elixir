@@ -35,7 +35,8 @@ defmodule PostHog.Supervisor do
            api_client: config.api_client,
            supervisor_name: config.supervisor_name,
            max_batch_time_ms: Map.get(config, :max_batch_time_ms, to_timeout(second: 10)),
-           max_batch_events: Map.get(config, :max_batch_events, 100)
+           max_batch_events: Map.get(config, :max_batch_events, 100),
+           test_mode: config.test_mode
          ]}
       ]
 
