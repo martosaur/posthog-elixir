@@ -4,6 +4,7 @@ defmodule PostHog.Sender do
 
   defstruct [
     :registry,
+    :index,
     :api_client,
     :max_batch_time_ms,
     :max_batch_events,
@@ -15,7 +16,7 @@ defmodule PostHog.Sender do
     name =
       opts
       |> Keyword.fetch!(:supervisor_name)
-      |> PostHog.Registry.via(__MODULE__)
+      |> PostHog.Registry.via(__MODULE__, opts[:index])
 
     callers = Process.get(:"$callers", [])
     Process.flag(:trap_exit, true)
@@ -33,8 +34,16 @@ defmodule PostHog.Sender do
         PostHog.Test.remember_event(supervisor_name, event)
 
       _ ->
-        supervisor_name
-        |> PostHog.Registry.via(__MODULE__)
+        senders =
+          supervisor_name
+          |> PostHog.Registry.registry_name()
+          |> Registry.select([{{{__MODULE__, :_}, :"$1", :"$2"}, [], [{{:"$2", :"$1"}}]}])
+
+        # Pick the first available sender, otherwise random busy one.
+        senders
+        |> Keyword.get_lazy(:available, fn ->
+          senders |> Keyword.values() |> Enum.random()
+        end)
         |> GenServer.cast({:event, event})
     end
   end
@@ -45,6 +54,7 @@ defmodule PostHog.Sender do
   def init({opts, callers}) do
     state = %__MODULE__{
       registry: PostHog.Registry.registry_name(opts[:supervisor_name]),
+      index: Keyword.fetch!(opts, :index),
       api_client: Keyword.fetch!(opts, :api_client),
       max_batch_time_ms: Keyword.fetch!(opts, :max_batch_time_ms),
       max_batch_events: Keyword.fetch!(opts, :max_batch_events),
@@ -53,6 +63,9 @@ defmodule PostHog.Sender do
     }
 
     Process.put(:"$callers", callers)
+
+    {:available, nil} =
+      Registry.update_value(state.registry, registry_key(state.index), fn _ -> :available end)
 
     {:ok, state}
   end
@@ -81,7 +94,9 @@ defmodule PostHog.Sender do
 
   @impl GenServer
   def handle_continue(:send_batch, state) do
+    Registry.update_value(state.registry, registry_key(state.index), fn _ -> :busy end)
     PostHog.API.post_batch(state.api_client, state.events)
+    Registry.update_value(state.registry, registry_key(state.index), fn _ -> :available end)
     {:noreply, %{state | events: [], num_events: 0}}
   end
 
@@ -91,4 +106,6 @@ defmodule PostHog.Sender do
   end
 
   def terminate(_reason, _state), do: :ok
+
+  defp registry_key(index), do: {__MODULE__, index}
 end

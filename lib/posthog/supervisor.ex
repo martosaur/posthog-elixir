@@ -29,19 +29,30 @@ defmodule PostHog.Supervisor do
         {Registry,
          keys: :unique,
          name: PostHog.Registry.registry_name(config.supervisor_name),
-         meta: [config: config]},
+         meta: [config: config]}
+      ] ++ senders(config)
+
+    Process.put(:"$callers", callers)
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp senders(config) do
+    pool_size = Map.get(config, :sender_pool_size, max(System.schedulers_online(), 2))
+
+    for index <- 1..pool_size do
+      Supervisor.child_spec(
         {PostHog.Sender,
          [
            api_client: config.api_client,
            supervisor_name: config.supervisor_name,
            max_batch_time_ms: Map.get(config, :max_batch_time_ms, to_timeout(second: 10)),
            max_batch_events: Map.get(config, :max_batch_events, 100),
-           test_mode: config.test_mode
-         ]}
-      ]
-
-    Process.put(:"$callers", callers)
-
-    Supervisor.init(children, strategy: :one_for_one)
+           test_mode: config.test_mode,
+           index: index
+         ]},
+        id: {PostHog.Sender, index}
+      )
+    end
   end
 end
