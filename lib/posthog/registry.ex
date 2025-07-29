@@ -13,4 +13,7 @@ defmodule PostHog.Registry do
 
   def via(supervisor_name, server_name),
     do: {:via, Registry, {registry_name(supervisor_name), server_name}}
+
+  def via(supervisor_name, pool_name, index),
+    do: {:via, Registry, {registry_name(supervisor_name), {pool_name, index}}}
 end
