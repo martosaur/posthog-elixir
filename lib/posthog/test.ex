@@ -29,7 +29,7 @@ defmodule PostHog.Test do
 
   ## Concurrency
 
-  PostHog uses a powerful `NimbleOwnership` ownership mechanism to determine
+  PostHog uses `NimbleOwnership` ownership mechanism to determine
   which events belong to which tests. This should work very well for most tests.
 
   However, in some cases captured events cannot be traced back to tests. Those
