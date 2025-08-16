@@ -64,11 +64,7 @@ defmodule PostHog.MixProject do
       {:nimble_ownership, "~> 1.0"},
       # Development tools
       {:ex_doc, "~> 0.37", only: :dev, runtime: false},
-      # {:logger_handler_kit, "~> 0.3", only: :test},
-      {:logger_handler_kit,
-       git: "https://github.com/martosaur/logger_handler_kit",
-       branch: "am-share-ownership-to",
-       only: :test},
+      {:logger_handler_kit, "~> 0.4", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mox, "~> 1.1", only: :test}
     ]
