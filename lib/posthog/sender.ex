@@ -94,6 +94,10 @@ defmodule PostHog.Sender do
 
   @impl GenServer
   def handle_continue(:send_batch, state) do
+    # Before we initiate an HTTP request that might block the process
+    # for a potentially noticeable time, we signal to the outside world that this
+    # sender is currently busy and if there is another sender available it
+    # should be used instead.
     Registry.update_value(state.registry, registry_key(state.index), fn _ -> :busy end)
     PostHog.API.post_batch(state.api_client, state.events)
     Registry.update_value(state.registry, registry_key(state.index), fn _ -> :available end)
