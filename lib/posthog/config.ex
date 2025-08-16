@@ -1,59 +1,4 @@
 defmodule PostHog.Config do
-  @configuration_schema [
-    public_url: [
-      type: :string,
-      required: true,
-      doc: "`https://us.i.posthog.com` for US cloud or `https://eu.i.posthog.com` for EU cloud"
-    ],
-    api_key: [
-      type: :string,
-      required: true,
-      doc: """
-      Your PostHog Project API key. Find it in your project's settings under the Project ID section.
-      """
-    ],
-    api_client_module: [
-      type: :atom,
-      default: PostHog.API.Client,
-      doc: "API client to use"
-    ],
-    supervisor_name: [
-      type: :atom,
-      default: PostHog,
-      doc: "Name of the supervisor process running PostHog"
-    ],
-    metadata: [
-      type: {:list, :atom},
-      default: [],
-      doc: "List of metadata keys to include in event properties"
-    ],
-    capture_level: [
-      type: {:or, [{:in, Logger.levels()}, nil]},
-      default: :error,
-      doc:
-        "Minimum level for logs that should be captured as errors. Errors with `crash_reason` are always captured."
-    ],
-    in_app_otp_apps: [
-      type: {:list, :atom},
-      default: [],
-      doc:
-        "List of OTP app names of your applications. Stacktrace entries that belong to these apps will be marked as \"in_app\"."
-    ]
-  ]
-
-  @convenience_schema [
-    enable: [
-      type: :boolean,
-      default: true,
-      doc: "Automatically start PostHog?"
-    ],
-    enable_error_tracking: [
-      type: :boolean,
-      default: true,
-      doc: "Automatically start the logger handler for error tracking?"
-    ]
-  ]
-
   @shared_schema [
     test_mode: [
       type: :boolean,
@@ -62,8 +7,64 @@ defmodule PostHog.Config do
     ]
   ]
 
-  @compiled_configuration_schema NimbleOptions.new!(@configuration_schema ++ @shared_schema)
-  @compiled_convenience_schema NimbleOptions.new!(@convenience_schema ++ @shared_schema)
+  @configuration_schema [
+                          public_url: [
+                            type: :string,
+                            required: true,
+                            doc:
+                              "`https://us.i.posthog.com` for US cloud or `https://eu.i.posthog.com` for EU cloud"
+                          ],
+                          api_key: [
+                            type: :string,
+                            required: true,
+                            doc: """
+                            Your PostHog Project API key. Find it in your project's settings under the Project ID section.
+                            """
+                          ],
+                          api_client_module: [
+                            type: :atom,
+                            default: PostHog.API.Client,
+                            doc: "API client to use"
+                          ],
+                          supervisor_name: [
+                            type: :atom,
+                            default: PostHog,
+                            doc: "Name of the supervisor process running PostHog"
+                          ],
+                          metadata: [
+                            type: {:list, :atom},
+                            default: [],
+                            doc: "List of metadata keys to include in event properties"
+                          ],
+                          capture_level: [
+                            type: {:or, [{:in, Logger.levels()}, nil]},
+                            default: :error,
+                            doc:
+                              "Minimum level for logs that should be captured as errors. Errors with `crash_reason` are always captured."
+                          ],
+                          in_app_otp_apps: [
+                            type: {:list, :atom},
+                            default: [],
+                            doc:
+                              "List of OTP app names of your applications. Stacktrace entries that belong to these apps will be marked as \"in_app\"."
+                          ]
+                        ] ++ @shared_schema
+
+  @convenience_schema [
+                        enable: [
+                          type: :boolean,
+                          default: true,
+                          doc: "Automatically start PostHog?"
+                        ],
+                        enable_error_tracking: [
+                          type: :boolean,
+                          default: true,
+                          doc: "Automatically start the logger handler for error tracking?"
+                        ]
+                      ] ++ @shared_schema
+
+  @compiled_configuration_schema NimbleOptions.new!(@configuration_schema)
+  @compiled_convenience_schema NimbleOptions.new!(@convenience_schema)
 
   @moduledoc """
   PostHog configuration
@@ -96,11 +97,11 @@ defmodule PostHog.Config do
   def read!() do
     configuration_options =
       Application.get_all_env(:posthog)
-      |> Keyword.take(Keyword.keys(@configuration_schema ++ @shared_schema))
+      |> Keyword.take(Keyword.keys(@configuration_schema))
 
     convenience_options =
       Application.get_all_env(:posthog)
-      |> Keyword.take(Keyword.keys(@convenience_schema ++ @shared_schema))
+      |> Keyword.take(Keyword.keys(@convenience_schema))
 
     convenience_options
     |> NimbleOptions.validate!(@compiled_convenience_schema)
