@@ -111,44 +111,34 @@ iex> PostHog.get_event_context("sensitive_event")
 
 ## Feature Flags
 
-`PostHog.get_feature_flag/2` is a thin wrapper over the `/flags` API request:
+`PostHog.check_feature_flag/2` is the main function for checking a feature flag. 
 
 ```elixir
-# With just distinct_id
-iex> PostHog.get_feature_flag("distinct_id_of_the_user")
-{:ok, %Req.Response{status: 200, body: %{"flags" => %{...}}}}
+# Simple boolean feature flag
+iex> PostHog.check_feature_flag("example-feature-flag-1", "user123")
+{:ok, true}
 
-# With group id for group-based feature flags
-iex> PostHog.get_feature_flag(%{distinct_id: "distinct_id_of_the_user", groups: %{group_type: "group_id"}})
-{:ok, %Req.Response{status: 200, body: %{"flags" => %{}}}}
-```
+# Note how it automatically sets `$feature/example-feature-flag-1` property in the context
+iex> PostHog.get_context()
+%{"$feature/example-feature-flag-1" => true}
 
-Checking for a feature flag is not a trivial operation and comes in all shapes
-and sizes, so users are encouraged to write their own helper function for that.
-Here's an example of what it might look like:
+# It will attempt to take distinct_id from the context if it's not provided
+iex> PostHog.set_context(%{distinct_id: "user123"})
+:ok
+iex> PostHog.check_feature_flag("example-feature-flag-1")
+{:ok, true}
 
-```elixir
-defmodule MyApp.PostHogHelper do
-  def feature_flag(flag_name, distinct_id \\ nil) do
-    distinct_id = distinct_id || PostHog.get_context() |> Map.fetch!(:distinct_id)
-    
-    response = 
-      case PostHog.get_feature_flag(distinct_id) do
-        {:ok, %{status: 200, body: %{"flags" => %{^flag_name => %{"variant" => variant}}}}} when not is_nil(variant) -> variant
-        {:ok, %{status: 200, body: %{"flags" => %{^flag_name => %{"enabled" => true}}}}} -> true
-        _ -> false
-      end
-    
-    PostHog.capture("$feature_flag_called", %{
-      distinct_id: distinct_id,
-      "$feature_flag": flag_name,
-      "$feature_flag_response": response
-    })
+# You can also pass a map with body parameters that will be sent to the /flags API as-is
+iex> PostHog.check_feature_flag("example-feature-flag-1", %{distinct_id: "user123", groups: %{group_type: "group_id"}})
+{:ok, true}
 
-    PostHog.set_context(%{"$feature/#{flag_name}" => response})
-    response
-  end
-end
+# It returns variant if it's set
+iex> PostHog.check_feature_flag("example-feature-flag-2", "user123")
+{:ok, "variant2"}
+
+# Returns error if feature flag doesn't exist
+iex> PostHog.check_feature_flag("example-feature-flag-3", "user123")
+{:error, %PostHog.UnexpectedResponseError{message: "Feature flag example-feature-flag-3 was not found in the response", response: ...}}
 ```
 
 ## Error Tracking

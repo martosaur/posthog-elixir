@@ -52,7 +52,7 @@ defmodule PostHog do
 
       PostHog.bare_capture("event_captured", "user123", %{backend: "Phoenix"})
       
-      Capture through a named PostHog instance:
+  Capture through a named PostHog instance:
 
       PostHog.bare_capture(MyPostHog, "event_captured", "user123")
   """
@@ -88,7 +88,7 @@ defmodule PostHog do
       PostHog.set_context(%{distinct_id: "user123", "$feature/my-feature-flag": true})
       PostHog.capture("job_started", %{job_name: "JobName"})
       
-      Set context and capture an event through a named PostHog instance:
+  Set context and capture an event through a named PostHog instance:
 
       PostHog.set_context(MyPostHog, %{distinct_id: "user123", "$feature/my-feature-flag": true})
       PostHog.capture(MyPostHog, "job_started", %{job_name: "JobName"})
@@ -106,17 +106,184 @@ defmodule PostHog do
     end
   end
 
-  @spec get_feature_flag(supervisor_name(), distinct_id() | map()) ::
-          PostHog.API.Client.response()
-  def get_feature_flag(name \\ __MODULE__, distinct_id_or_body) do
-    body =
-      case distinct_id_or_body do
-        %{} = body -> body
-        distinct_id -> %{distinct_id: distinct_id}
+  @doc """
+  Make request to [`/flags`](https://posthog.com/docs/api/flags) API.
+
+  This function is a thin wrapper over a client call and is useful as a building
+  block to build your own `check_feature_flag/3`. For example, this is a preferred
+  way to access remote config payload.
+
+  ## Examples
+
+  Make request to `/flags` API:
+
+      PostHog.flags(%{distinct_id: "user123"})
+      
+  Make request to `/flags` API with additional body params:
+
+      PostHog.flags(%{distinct_id: "my_distinct_id", groups: %{group_type: "group_id"}})
+      
+  Make request to `/flags` API through a named PostHog instance:
+
+      PostHog.flags(MyPostHog, %{distinct_id: "user123"})
+  """
+  @spec flags(supervisor_name(), map()) ::
+          PostHog.API.Client.response() | {:error, PostHog.Error.t()}
+  def flags(name \\ __MODULE__, body) do
+    config = config(name)
+
+    case PostHog.API.flags(config.api_client, body) do
+      {:ok, %{status: 200, body: %{"flags" => _}}} = resp ->
+        resp
+
+      {:ok, %{status: 200, body: body}} ->
+        {:error,
+         %PostHog.UnexpectedResponseError{
+           response: body,
+           message: "Expected response body to have \"flags\" key"
+         }}
+
+      {:ok, resp} ->
+        {:error, %PostHog.UnexpectedResponseError{response: resp, message: "Unexpected response"}}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc false
+  def get_all_feature_flags(distinct_id_or_body) when not is_atom(distinct_id_or_body),
+    do: get_all_feature_flags(__MODULE__, distinct_id_or_body)
+
+  @doc """
+  Get all feature flags.
+
+  Accepts an optional `distinct_id` or a map with request body. If neither is
+  passed, attempts to read `distinct_id` from the context.
+
+  ## Examples
+
+  Get all feature flags:
+
+      PostHog.get_all_feature_flags("user123")
+      
+  Get all feature flags with full request body:
+
+      PostHog.get_all_feature_flags(%{distinct_id: "user123", group: %{group_type: "group_id"}})
+      
+  Get all feature flags for `distinct_id` from the context:
+
+      PostHog.set_context(%{distinct_id: "user123"})
+      PostHog.get_all_feature_flags()
+      
+  Get all feature flags through a named PostHog instance:
+
+      PostHog.get_all_feature_flags(MyPostHog, "foo")
+  """
+  @spec get_all_feature_flags(supervisor_name(), distinct_id() | map() | nil) ::
+          {:ok, map()} | {:error, Exception.t()}
+  def get_all_feature_flags(name \\ __MODULE__, distinct_id_or_body \\ nil) do
+    with {:ok, body} <- body_for_flags(distinct_id_or_body),
+         {:ok, %{body: %{"flags" => flags}}} <- flags(name, body) do
+      {:ok, flags}
+    end
+  end
+
+  @doc false
+  def check_feature_flag(flag_name, distinct_id_or_body) when not is_atom(flag_name),
+    do: check_feature_flag(__MODULE__, flag_name, distinct_id_or_body)
+
+  @doc """
+  Checks feature flag
+
+  If there is a variant assigned, returns `{:ok, variant}`. Otherwise, `{:ok,
+  true}` or `{:ok, false}`.
+
+  Accepts an optional `distinct_id` or a map with request body. If neither is
+  passed, attempts to read `distinct_id` from the context.
+
+  This function will also
+  [send](https://posthog.com/docs/api/flags#step-3-send-a-feature_flag_called-event)
+  `$feature_flag_called` event and
+  [set](https://posthog.com/docs/api/flags#step-2-include-feature-flag-information-when-capturing-events)
+  `$feature/feature-flag-name` property in context. 
+
+  ## Examples
+
+  Check boolean feature flag for `distinct_id`:
+
+      iex> PostHog.check_feature_flag("example-feature-flag-1", "user123")
+      {:ok, true}
+      
+  Check multivariant feature flag for `distinct_id` in the current context:
+
+      iex> PostHog.set_context(%{distinct_id: "user123"})
+      iex> PostHog.check_feature_flag("example-feature-flag-1")
+      {:ok, "variant1"}
+      
+  Check boolean feature flag through a named PostHog instance:
+
+      PostHog.check_feature_flag(MyPostHog, "example-feature-flag-1", "user123")
+  """
+  @spec check_feature_flag(supervisor_name(), String.t(), distinct_id() | map() | nil) ::
+          {:ok, boolean()} | {:ok, String.t()} | {:error, Exception.t()}
+  def check_feature_flag(name \\ __MODULE__, flag_name, distinct_id_or_body \\ nil) do
+    with {:ok, %{distinct_id: distinct_id} = body} <- body_for_flags(distinct_id_or_body),
+         {:ok, %{body: body}} <- flags(name, body) do
+      result =
+        case body do
+          %{"flags" => %{^flag_name => %{"variant" => variant}}} when not is_nil(variant) ->
+            {:ok, variant}
+
+          %{"flags" => %{^flag_name => %{"enabled" => true}}} ->
+            {:ok, true}
+
+          %{"flags" => %{^flag_name => _}} ->
+            {:ok, false}
+
+          %{"flags" => _} ->
+            {:error,
+             %PostHog.UnexpectedResponseError{
+               response: body,
+               message: "Feature flag #{flag_name} was not found in the response"
+             }}
+        end
+
+      with {:ok, variant} <- result do
+        PostHog.capture(name, "$feature_flag_called", %{
+          distinct_id: distinct_id,
+          "$feature_flag": flag_name,
+          "$feature_flag_response": variant
+        })
+
+        PostHog.set_context(name, %{"$feature/#{flag_name}" => variant})
       end
 
-    config = config(name)
-    PostHog.API.flags(config.api_client, body)
+      result
+    end
+  end
+
+  defp body_for_flags(distinct_id_or_body) do
+    case distinct_id_or_body do
+      %{distinct_id: _distinct_id} = body ->
+        {:ok, body}
+
+      nil ->
+        case PostHog.get_context() do
+          %{distinct_id: distinct_id} ->
+            {:ok, %{distinct_id: distinct_id}}
+
+          _context ->
+            {:error,
+             %PostHog.Error{
+               message:
+                 "distinct_id is required but wasn't explicitely provided or found in the context"
+             }}
+        end
+
+      distinct_id when is_binary(distinct_id) ->
+        {:ok, %{distinct_id: distinct_id}}
+    end
   end
 
   @doc """
@@ -132,8 +299,8 @@ defmodule PostHog do
 
   Set and retrieve context for a named PostHog instance:
 
-  > PostHog.set_context(MyPostHog, %{foo: "bar"})
-  > PostHog.get_context(MyPostHog)
+      > PostHog.set_context(MyPostHog, %{foo: "bar"})
+      > PostHog.get_context(MyPostHog)
       %{foo: "bar"}
   """
   @spec set_context(supervisor_name(), properties()) :: :ok
@@ -152,8 +319,8 @@ defmodule PostHog do
      
   Set and retrieve context for a specific event through a named PostHog instance:
 
-  > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
-  > PostHog.get_event_context(MyPostHog, "$exception")
+      > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
+      > PostHog.get_event_context(MyPostHog, "$exception")
       %{foo: "bar"}
   """
   @spec set_event_context(supervisor_name(), event(), properties()) :: :ok
@@ -173,8 +340,8 @@ defmodule PostHog do
       
   Set and retrieve context for a named PostHog instance:
 
-  > PostHog.set_context(MyPostHog, %{foo: "bar"})
-  > PostHog.get_context(MyPostHog)
+      > PostHog.set_context(MyPostHog, %{foo: "bar"})
+      > PostHog.get_context(MyPostHog)
       %{foo: "bar"}
   """
   @spec get_context(supervisor_name()) :: properties()
@@ -193,8 +360,8 @@ defmodule PostHog do
      
   Set and retrieve context for a specific event through a named PostHog instance:
 
-  > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
-  > PostHog.get_event_context(MyPostHog, "$exception")
+      > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
+      > PostHog.get_event_context(MyPostHog, "$exception")
       %{foo: "bar"}
   """
   @spec get_event_context(supervisor_name()) :: properties()
