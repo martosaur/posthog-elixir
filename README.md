@@ -7,12 +7,12 @@ A powerful Elixir SDK for [PostHog](https://posthog.com)
 
 ## Features
 
-* Analytics and Feature Flags support
-* Error tracking support
-* Powerful process-based context propagation
-* Asynchronous event sending with built-in batching
-* Overridable HTTP client
-* Support for multiple PostHog projects
+- Analytics and Feature Flags support
+- Error tracking support
+- Powerful process-based context propagation
+- Asynchronous event sending with built-in batching
+- Overridable HTTP client
+- Support for multiple PostHog projects
 
 ## Getting Started
 
@@ -111,11 +111,11 @@ iex> PostHog.get_event_context("sensitive_event")
 
 ## Feature Flags
 
-`PostHog.check_feature_flag/2` is the main function for checking a feature flag. 
+`PostHog.FeatureFlags.check/2` is the main function for checking a feature flag.
 
 ```elixir
 # Simple boolean feature flag
-iex> PostHog.check_feature_flag("example-feature-flag-1", "user123")
+iex> PostHog.FeatureFlags.check("example-feature-flag-1", "user123")
 {:ok, true}
 
 # Note how it automatically sets `$feature/example-feature-flag-1` property in the context
@@ -125,27 +125,44 @@ iex> PostHog.get_context()
 # It will attempt to take distinct_id from the context if it's not provided
 iex> PostHog.set_context(%{distinct_id: "user123"})
 :ok
-iex> PostHog.check_feature_flag("example-feature-flag-1")
+iex> PostHog.FeatureFlags.check("example-feature-flag-1")
 {:ok, true}
 
 # You can also pass a map with body parameters that will be sent to the /flags API as-is
-iex> PostHog.check_feature_flag("example-feature-flag-1", %{distinct_id: "user123", groups: %{group_type: "group_id"}})
+iex> PostHog.FeatureFlags.check("example-feature-flag-1", %{distinct_id: "user123", groups: %{group_type: "group_id"}})
 {:ok, true}
 
 # It returns variant if it's set
-iex> PostHog.check_feature_flag("example-feature-flag-2", "user123")
+iex> PostHog.FeatureFlags.check("example-feature-flag-2", "user123")
 {:ok, "variant2"}
 
 # Returns error if feature flag doesn't exist
-iex> PostHog.check_feature_flag("example-feature-flag-3", "user123")
+iex> PostHog.FeatureFlags.check("example-feature-flag-3", "user123")
 {:error, %PostHog.UnexpectedResponseError{message: "Feature flag example-feature-flag-3 was not found in the response", response: ...}}
+```
+
+If you're feeling adventurous and/or is simply writing a script you can use the `Posthog.FeatureFlags.check!/2` helper instead and it will return a boolean or raise an error.
+
+```elixir
+# Simple boolean feature flag
+iex> PostHog.FeatureFlags.check!("example-feature-flag-1", "user123")
+true
+
+# Works for variants too
+iex> PostHog.FeatureFlags.check!("example-feature-flag-2", "user123")
+"variant2"
+
+
+# Raises error if feature flag doesn't exist
+iex> PostHog.FeatureFlags.check!("example-feature-flag-3", "user123")
+** (PostHog.UnexpectedResponseError) Feature flag example-feature-flag-3 was not found in the response
 ```
 
 ## Error Tracking
 
 Error Tracking is enabled by default.
 
-![](assets/screenshot.png)
+![](assets/error-tracking-screenshot.png)
 
 You can always disable it by setting `enable_error_tracking` to false:
 
@@ -156,4 +173,4 @@ config :posthog, enable_error_tracking: false
 ## Multiple PostHog Projects
 
 If your app works with multiple PostHog projects, PostHog can accommodate you. For
-setup instructions, consult the [advanced configuration guide](advanced-configuration.md).
+setup instructions, consult the [advanced configuration guide](guides/advanced-configuration.md).
