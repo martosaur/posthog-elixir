@@ -1,5 +1,6 @@
 defmodule PostHog.FeatureFlags do
   @type supervisor_name() :: PostHog.supervisor_name()
+  @type distinct_id() :: PostHog.distinct_id()
 
   @doc """
   Make request to [`/flags`](https://posthog.com/docs/api/flags) API.
@@ -25,7 +26,7 @@ defmodule PostHog.FeatureFlags do
   @spec flags(supervisor_name(), map()) ::
           PostHog.API.Client.response() | {:error, PostHog.Error.t()}
   def flags(name \\ PostHog, body) do
-    config = config(name)
+    config = PostHog.config(name)
 
     case PostHog.API.flags(config.api_client, body) do
       {:ok, %{status: 200, body: %{"flags" => _}}} = resp ->
@@ -196,7 +197,8 @@ defmodule PostHog.FeatureFlags do
 
   @doc false
   @spec log_feature_flag_usage(supervisor_name(), String.t(), String.t(), {:ok, boolean() | String.t()} | {:error, Exception.t()}) :: :ok
-  defp log_feature_flag_usage(name \\ PostHog, distinct_id, flag_name, {:ok, variant}) do
+  defp log_feature_flag_usage(name, distinct_id, flag_name, result)
+  defp log_feature_flag_usage(name, distinct_id, flag_name, {:ok, variant}) do
     PostHog.capture(name, "$feature_flag_called", %{
       distinct_id: distinct_id,
       "$feature_flag": flag_name,
