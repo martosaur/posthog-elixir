@@ -174,3 +174,17 @@ config :posthog, enable_error_tracking: false
 
 If your app works with multiple PostHog projects, PostHog can accommodate you. For
 setup instructions, consult the [advanced configuration guide](guides/advanced-configuration.md).
+
+## Developing locally
+
+To develop locally:
+
+1. Create your integration config by running the following. You can update it accordingly.
+
+```shell
+cp config/integration.example.exs config/integration.exs
+cp config/test.exs config/dev.exs
+```
+
+2. Install required dependencies with `asdf install`
+3. Install mix dependencies with `mix deps.get`
