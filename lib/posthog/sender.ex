@@ -99,14 +99,14 @@ defmodule PostHog.Sender do
     # sender is currently busy and if there is another sender available it
     # should be used instead.
     Registry.update_value(state.registry, registry_key(state.index), fn _ -> :busy end)
-    PostHog.API.post_batch(state.api_client, state.events)
+    PostHog.API.batch(state.api_client, state.events)
     Registry.update_value(state.registry, registry_key(state.index), fn _ -> :available end)
     {:noreply, %{state | events: [], num_events: 0}}
   end
 
   @impl GenServer
   def terminate(_reason, %{num_events: n} = state) when n > 0 do
-    PostHog.API.post_batch(state.api_client, state.events)
+    PostHog.API.batch(state.api_client, state.events)
   end
 
   def terminate(_reason, _state), do: :ok
