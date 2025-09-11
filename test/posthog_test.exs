@@ -201,4 +201,22 @@ defmodule PostHogTest do
       assert PostHog.get_event_context(MyPostHog, "$exception") == %{foo: "bar"}
     end
   end
+
+  describe "flush/2" do
+    test "default non-blocking flush" do
+      assert :ok = PostHog.flush()
+    end
+
+    test "flush with options only (no supervisor name)" do
+      assert :ok = PostHog.flush(blocking: false)
+      assert {:ok, :flushed} = PostHog.flush([blocking: true])
+    end
+
+    test "flush delegates to PostHog.Sender" do
+      # This test verifies the delegation works correctly
+      # The actual functionality is tested in sender_test.exs
+      assert :ok = PostHog.flush(PostHog, blocking: false)
+      assert {:ok, :flushed} = PostHog.flush(PostHog, blocking: true, timeout: 1000)
+    end
+  end
 end

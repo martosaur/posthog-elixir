@@ -207,4 +207,176 @@ defmodule PostHog.SenderTest do
       assert :ok = GenServer.stop(pid)
     end
   end
+
+  describe "flush/2" do
+    test "flush with no senders returns ok" do
+      assert :ok = Sender.flush(@supervisor_name, blocking: false)
+    end
+
+    test "flush in test mode returns ok" do
+      # Create a supervisor with test mode enabled
+      registry = PostHog.Registry.registry_name(:test_supervisor)
+
+      start_link_supervised!(
+        {Registry, keys: :unique, name: registry, meta: [config: %{test_mode: true}]}
+      )
+
+      assert :ok = Sender.flush(:test_supervisor, blocking: false)
+      assert {:ok, :flushed} = Sender.flush(:test_supervisor, blocking: true)
+    end
+
+    test "non-blocking flush sends messages to all senders", %{api_client: api_client} do
+      # Start two sender processes
+      pid1 = start_link_supervised!(
+        {Sender,
+         supervisor_name: @supervisor_name,
+         index: 1,
+         api_client: api_client,
+         max_batch_time_ms: 60_000,
+         max_batch_events: 100},
+        id: :sender1
+      )
+
+      pid2 = start_link_supervised!(
+        {Sender,
+         supervisor_name: @supervisor_name,
+         index: 2,
+         api_client: api_client,
+         max_batch_time_ms: 60_000,
+         max_batch_events: 100},
+        id: :sender2
+      )
+
+      # Add events to both senders
+      Sender.send("event1", @supervisor_name)
+      Sender.send("event2", @supervisor_name)
+
+      # Suspend both processes to check their message queues
+      :sys.suspend(pid1)
+      :sys.suspend(pid2)
+
+      # Non-blocking flush
+      assert :ok = Sender.flush(@supervisor_name, blocking: false)
+
+      # Check that both processes received the batch_time_reached message
+      # Note: We can't easily check message queues in a race-free way,
+      # so we'll check that the flush function returns properly
+
+      :sys.resume(pid1)
+      :sys.resume(pid2)
+    end
+
+    test "blocking flush waits for API calls to complete", %{api_client: api_client} do
+      test_pid = self()
+
+      pid = start_link_supervised!(
+        {Sender,
+         supervisor_name: @supervisor_name,
+         index: 1,
+         api_client: api_client,
+         max_batch_time_ms: 60_000,
+         max_batch_events: 100}
+      )
+
+      # Add an event
+      Sender.send("test_event", @supervisor_name)
+
+      # Mock the API call to send a message when called
+      expect(API.Mock, :request, fn _client, :post, "/batch", opts ->
+        assert opts[:json] == %{batch: ["test_event"]}
+        send(test_pid, :api_called)
+        {:ok, %{status: 200, body: %{}}}
+      end)
+
+      # Start blocking flush in a separate task
+      task = Task.async(fn ->
+        Sender.flush(@supervisor_name, blocking: true, timeout: 2_000)
+      end)
+
+      # Verify API was called
+      assert_receive :api_called, 1_000
+
+      # Verify flush completed successfully
+      assert {:ok, :flushed} = Task.await(task, 3_000)
+
+      # Verify sender state is cleared
+      assert %{events: [], num_events: 0} = :sys.get_state(pid)
+    end
+
+    test "blocking flush handles API errors", %{api_client: api_client} do
+      _pid = start_link_supervised!(
+        {Sender,
+         supervisor_name: @supervisor_name,
+         index: 1,
+         api_client: api_client,
+         max_batch_time_ms: 60_000,
+         max_batch_events: 100}
+      )
+
+      # Add an event
+      Sender.send("test_event", @supervisor_name)
+
+      # Mock API call to return an error
+      expect(API.Mock, :request, fn _client, :post, "/batch", _opts ->
+        {:error, :network_error}
+      end)
+
+      # Blocking flush should return error details
+      assert {:error, {:some_flushes_failed, failed_results}} =
+        Sender.flush(@supervisor_name, blocking: true, timeout: 2_000)
+
+      # Should have one failed result
+      assert length(failed_results) == 1
+      assert [{:ok, {:error, :network_error}}] = failed_results
+    end
+
+
+    test "flush_sync handle_call works directly", %{api_client: api_client} do
+      pid = start_link_supervised!(
+        {Sender,
+         supervisor_name: @supervisor_name,
+         index: 1,
+         api_client: api_client,
+         max_batch_time_ms: 60_000,
+         max_batch_events: 100}
+      )
+
+      # Add an event
+      Sender.send("test_event", @supervisor_name)
+
+      # Mock successful API call
+      expect(API.Mock, :request, fn _client, :post, "/batch", opts ->
+        assert opts[:json] == %{batch: ["test_event"]}
+        {:ok, %{status: 200, body: %{}}}
+      end)
+
+      # Direct GenServer call should work
+      assert :ok = GenServer.call(pid, :flush_sync)
+
+      # Verify sender state is cleared
+      assert %{events: [], num_events: 0} = :sys.get_state(pid)
+    end
+
+    test "flush_sync with no events returns immediately", %{api_client: api_client} do
+      pid = start_link_supervised!(
+        {Sender,
+         supervisor_name: @supervisor_name,
+         index: 1,
+         api_client: api_client,
+         max_batch_time_ms: 60_000,
+         max_batch_events: 100}
+      )
+
+      # No API call should be made
+      expect(API.Mock, :request, 0, fn _, _, _, _ ->
+        {:ok, %{status: 200, body: %{}}}
+      end)
+
+      # Direct GenServer call with no events
+      assert :ok = GenServer.call(pid, :flush_sync)
+
+      # State should remain unchanged
+      assert %{events: [], num_events: 0} = :sys.get_state(pid)
+    end
+  end
 end

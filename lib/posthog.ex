@@ -186,4 +186,50 @@ defmodule PostHog do
   """
   @spec get_event_context(supervisor_name()) :: properties()
   def get_event_context(name \\ __MODULE__, event), do: PostHog.Context.get(name, event)
+
+  @doc """
+  Flushes all pending events.
+
+  This function forces all sender processes to immediately send their batched events
+  to PostHog, regardless of the current batch size or time limits.
+
+  ## Options
+
+    * `:blocking` - If `true`, waits for all flush operations to complete.
+      If `false` (default), returns immediately after triggering flushes.
+    * `:timeout` - Maximum time to wait when `:blocking` is `true`.
+      Defaults to 5000ms.
+
+  ## Examples
+
+      # Non-blocking flush (default)
+      PostHog.flush()
+
+      # Blocking flush with default timeout
+      PostHog.flush(blocking: true)
+
+      # Blocking flush with custom timeout
+      PostHog.flush(blocking: true, timeout: 10_000)
+
+      # Flush for a named PostHog instance
+      PostHog.flush(MyPostHog, blocking: true)
+
+  ## Returns
+
+  Returns `:ok` when `:blocking` is `false`.
+  Returns `{:ok, :flushed}` when `:blocking` is `true` and all flushes complete.
+  Returns `{:error, :timeout}` when `:blocking` is `true` and timeout is reached.
+  Returns `{:error, {:some_flushes_failed, details}}` when some flushes fail.
+  """
+  @spec flush(supervisor_name(), keyword()) ::
+    :ok |
+    {:ok, :flushed} |
+    {:error, :timeout} |
+    {:error, {:some_flushes_failed, list()}}
+
+  def flush(), do: flush(__MODULE__, [])
+
+  def flush(name \\ __MODULE__, opts) do
+    PostHog.Sender.flush(name, opts)
+  end
 end
