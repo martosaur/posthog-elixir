@@ -30,11 +30,21 @@ defmodule PostHog.Supervisor do
          keys: :unique,
          name: PostHog.Registry.registry_name(config.supervisor_name),
          meta: [config: config]}
-      ] ++ senders(config)
+      ] ++
+      feature_flags_poller(config) ++
+      senders(config)
 
     Process.put(:"$callers", callers)
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp feature_flags_poller(config) do
+    if PostHog.FeatureFlags.Poller.local_evaluation_enabled?(config) do
+      [{PostHog.FeatureFlags.Poller, config}]
+    else
+      []
+    end
   end
 
   defp senders(config) do

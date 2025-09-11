@@ -47,6 +47,25 @@ defmodule PostHog.Config do
                             default: [],
                             doc:
                               "List of OTP app names of your applications. Stacktrace entries that belong to these apps will be marked as \"in_app\"."
+                          ],
+                          personal_api_key: [
+                            type: :string,
+                            doc: "Personal API key for feature flag local evaluation. Required for local evaluation to work."
+                          ],
+                          enable_local_evaluation: [
+                            type: :boolean,
+                            default: true,
+                            doc: "Enable feature flag local evaluation. When enabled, feature flags are polled and cached locally."
+                          ],
+                          feature_flags_poll_interval: [
+                            type: :pos_integer,
+                            default: 30_000,
+                            doc: "Interval in milliseconds for polling feature flag definitions for local evaluation."
+                          ],
+                          feature_flags_request_timeout: [
+                            type: :pos_integer,
+                            default: 10_000,
+                            doc: "Timeout in milliseconds for feature flag API requests."
                           ]
                         ] ++ @shared_schema
 

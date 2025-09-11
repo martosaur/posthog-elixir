@@ -79,9 +79,29 @@ defmodule PostHog.FeatureFlags do
   @spec flags_for(supervisor_name(), distinct_id() | map() | nil) ::
           {:ok, map()} | {:error, Exception.t()}
   def flags_for(name \\ PostHog, distinct_id_or_body \\ nil) do
-    with {:ok, body} <- body_for_flags(distinct_id_or_body),
-         {:ok, %{body: %{"flags" => flags}}} <- flags(name, body) do
-      {:ok, flags}
+    config = PostHog.config(name)
+
+    with {:ok, body} <- body_for_flags(distinct_id_or_body) do
+      only_evaluate_locally = Map.get(body, :only_evaluate_locally, false)
+
+      # Try local evaluation if enabled
+      if only_evaluate_locally or PostHog.FeatureFlags.Poller.local_evaluation_enabled?(config) do
+        case get_all_flags_locally(config, body) do
+          {:ok, flags} -> {:ok, flags}
+          {:error, _} when not only_evaluate_locally ->
+            # Fall back to remote if local evaluation fails and not forced
+            with {:ok, %{body: %{"flags" => flags}}} <- flags(name, body) do
+              {:ok, flags}
+            end
+          {:error, reason} ->
+            {:error, %PostHog.Error{message: "Local evaluation failed: #{inspect(reason)}"}}
+        end
+      else
+        # Use remote evaluation
+        with {:ok, %{body: %{"flags" => flags}}} <- flags(name, body) do
+          {:ok, flags}
+        end
+      end
     end
   end
 
@@ -104,6 +124,17 @@ defmodule PostHog.FeatureFlags do
   [set](https://posthog.com/docs/api/flags#step-2-include-feature-flag-information-when-capturing-events)
   `$feature/feature-flag-name` property in context.
 
+  ## Options
+
+  The `distinct_id_or_body` parameter can be:
+  - A string with the distinct_id
+  - A map with request options including:
+    - `:distinct_id` - The user's distinct ID
+    - `:person_properties` - Map of person properties for local evaluation
+    - `:groups` - Map of group information
+    - `:group_properties` - Map of group properties for local evaluation
+    - `:only_evaluate_locally` - Boolean to force local-only evaluation
+
   ## Examples
 
   Check boolean feature flag for `distinct_id`:
@@ -117,6 +148,15 @@ defmodule PostHog.FeatureFlags do
       iex> PostHog.FeatureFlags.check("example-feature-flag-1")
       {:ok, "variant1"}
 
+  Check feature flag with local evaluation only:
+
+      iex> PostHog.FeatureFlags.check("example-feature-flag-1", %{
+      ...>   distinct_id: "user123",
+      ...>   person_properties: %{"country" => "US"},
+      ...>   only_evaluate_locally: true
+      ...> })
+      {:ok, true}
+
   Check boolean feature flag through a named PostHog instance:
 
       PostHog.check(MyPostHog, "example-feature-flag-1", "user123")
@@ -124,29 +164,44 @@ defmodule PostHog.FeatureFlags do
   @spec check(supervisor_name(), String.t(), distinct_id() | map() | nil) ::
           {:ok, boolean()} | {:ok, String.t()} | {:error, Exception.t()}
   def check(name \\ PostHog, flag_name, distinct_id_or_body \\ nil) do
-    with {:ok, %{distinct_id: distinct_id} = body} <- body_for_flags(distinct_id_or_body),
-         {:ok, %{body: body}} <- flags(name, body) do
-      result =
-        case body do
-          %{"flags" => %{^flag_name => %{"variant" => variant}}} when not is_nil(variant) ->
-            {:ok, variant}
+    config = PostHog.config(name)
 
-          %{"flags" => %{^flag_name => %{"enabled" => true}}} ->
-            {:ok, true}
+    with {:ok, %{distinct_id: distinct_id} = body} <- body_for_flags(distinct_id_or_body) do
+      # Check if we should only evaluate locally
+      only_evaluate_locally = Map.get(body, :only_evaluate_locally, false)
 
-          %{"flags" => %{^flag_name => _}} ->
-            {:ok, false}
-
-          %{"flags" => _} ->
-            {:error,
-             %PostHog.UnexpectedResponseError{
-               response: body,
-               message: "Feature flag #{flag_name} was not found in the response"
-             }}
+      # Try local evaluation first if enabled
+      local_result =
+        if not only_evaluate_locally and PostHog.FeatureFlags.Poller.local_evaluation_enabled?(config) do
+          try_local_evaluation(config, flag_name, body)
+        else
+          nil
         end
 
-      # Make sure we keep track of the feature flag usage for debugging purposes
-      # Users are NOT charged extra for this, but it's still good to have.
+      result = case {local_result, only_evaluate_locally} do
+        {{:ok, value, true}, _} ->
+          # Successfully evaluated locally
+          {:ok, value}
+
+        {_, true} ->
+          # Only local evaluation requested but failed
+          case try_local_evaluation(config, flag_name, body) do
+            {:ok, value, _} -> {:ok, value}
+            {:error, reason} -> {:error, %PostHog.Error{message: "Local evaluation failed: #{inspect(reason)}"}}
+          end
+
+        _ ->
+          # Fall back to remote evaluation
+          case flags(name, body) do
+            {:ok, %{body: response_body}} ->
+              parse_flag_response(response_body, flag_name)
+
+            {:error, _} = error ->
+              error
+          end
+      end
+
+      # Track feature flag usage for debugging
       log_feature_flag_usage(name, distinct_id, flag_name, result)
 
       result
@@ -211,6 +266,71 @@ defmodule PostHog.FeatureFlags do
   defp log_feature_flag_usage(_name, _distinct_id, _flag_name, {:error, _error}) do
     # Do nothing for error cases
     :ok
+  end
+
+  @doc false
+  defp get_all_flags_locally(config, body) do
+    %{feature_flags: flags} = PostHog.FeatureFlags.Poller.get_feature_flags(config)
+
+    if Enum.empty?(flags) do
+      {:error, :no_flags_available}
+    else
+      eval_options = %{
+        distinct_id: Map.get(body, :distinct_id),
+        person_properties: Map.get(body, :person_properties, %{}),
+        groups: Map.get(body, :groups, %{}),
+        group_properties: Map.get(body, :group_properties, %{}),
+        only_evaluate_locally: true
+      }
+
+      # Evaluate all flags locally
+      evaluated_flags =
+        flags
+        |> Enum.map(fn flag ->
+          flag_key = Map.get(flag, "key")
+          case PostHog.FeatureFlags.Evaluator.evaluate_flag(config, flag_key, eval_options) do
+            {:ok, value, _} -> {flag_key, %{"enabled" => value != false, "variant" => (if is_binary(value), do: value, else: nil)}}
+            {:error, _} -> {flag_key, %{"enabled" => false, "variant" => nil}}
+          end
+        end)
+        |> Map.new()
+
+      {:ok, evaluated_flags}
+    end
+  end
+
+  @doc false
+  defp try_local_evaluation(config, flag_name, body) do
+    eval_options = %{
+      distinct_id: Map.get(body, :distinct_id),
+      person_properties: Map.get(body, :person_properties, %{}),
+      groups: Map.get(body, :groups, %{}),
+      group_properties: Map.get(body, :group_properties, %{}),
+      only_evaluate_locally: Map.get(body, :only_evaluate_locally, false)
+    }
+
+    PostHog.FeatureFlags.Evaluator.evaluate_flag(config, flag_name, eval_options)
+  end
+
+  @doc false
+  defp parse_flag_response(response_body, flag_name) do
+    case response_body do
+      %{"flags" => %{^flag_name => %{"variant" => variant}}} when not is_nil(variant) ->
+        {:ok, variant}
+
+      %{"flags" => %{^flag_name => %{"enabled" => true}}} ->
+        {:ok, true}
+
+      %{"flags" => %{^flag_name => _}} ->
+        {:ok, false}
+
+      %{"flags" => _} ->
+        {:error,
+         %PostHog.UnexpectedResponseError{
+           response: response_body,
+           message: "Feature flag #{flag_name} was not found in the response"
+         }}
+    end
   end
 
   @doc false
