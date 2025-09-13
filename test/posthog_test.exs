@@ -165,7 +165,6 @@ defmodule PostHogTest do
     end
   end
 
-
   describe "set_context/2 + get_context/2" do
     test "default scope" do
       PostHog.set_context(%{foo: "bar"})

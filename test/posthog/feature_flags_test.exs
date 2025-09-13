@@ -38,7 +38,10 @@ defmodule PostHog.FeatureFlagsTest do
       end)
 
       assert {:ok, %{}} =
-               PostHog.FeatureFlags.flags(%{distinct_id: "foo", groups: %{group_type: "group_id"}})
+               PostHog.FeatureFlags.flags(%{
+                 distinct_id: "foo",
+                 groups: %{group_type: "group_id"}
+               })
     end
 
     test "client errors passed as is" do
@@ -82,7 +85,8 @@ defmodule PostHog.FeatureFlagsTest do
         API.Stub.request(client, method, url, opts)
       end)
 
-      assert {:ok, %{body: %{"flags" => _}}} = PostHog.FeatureFlags.flags(MyPostHog, %{distinct_id: "foo"})
+      assert {:ok, %{body: %{"flags" => _}}} =
+               PostHog.FeatureFlags.flags(MyPostHog, %{distinct_id: "foo"})
     end
   end
 

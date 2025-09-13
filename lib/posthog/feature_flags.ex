@@ -187,7 +187,8 @@ defmodule PostHog.FeatureFlags do
       iex> PostHog.FeatureFlags.check!("example-feature-flag-3", "user123")
       ** (PostHog.UnexpectedResponseError) Feature flag example-feature-flag-3 was not found in the response
   """
-  @spec check!(supervisor_name(), String.t(), distinct_id() | map() | nil) :: boolean() | String.t() | no_return()
+  @spec check!(supervisor_name(), String.t(), distinct_id() | map() | nil) ::
+          boolean() | String.t() | no_return()
   def check!(name \\ PostHog, flag_name, distinct_id_or_body \\ nil) do
     case check(name, flag_name, distinct_id_or_body) do
       {:ok, result} -> result
@@ -207,7 +208,6 @@ defmodule PostHog.FeatureFlags do
     end
   end
 
-  @doc false
   defp body_for_flags(distinct_id_or_body) do
     case distinct_id_or_body do
       %{distinct_id: _distinct_id} = body ->
