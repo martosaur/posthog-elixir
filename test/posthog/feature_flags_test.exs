@@ -6,6 +6,7 @@ defmodule PostHog.FeatureFlagsTest do
   import Mox
 
   alias PostHog.API
+  alias PostHog.FeatureFlags
 
   setup :setup_supervisor
   setup :verify_on_exit!
@@ -24,7 +25,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:ok, %{status: 200, body: %{"flags" => %{}}}}
       end)
 
-      assert {:ok, %{status: 200, body: %{}}} = PostHog.FeatureFlags.flags(%{distinct_id: "foo"})
+      assert {:ok, %{status: 200, body: %{}}} = FeatureFlags.flags(%{distinct_id: "foo"})
     end
 
     test "sophisticated body" do
@@ -38,7 +39,7 @@ defmodule PostHog.FeatureFlagsTest do
       end)
 
       assert {:ok, %{}} =
-               PostHog.FeatureFlags.flags(%{
+               FeatureFlags.flags(%{
                  distinct_id: "foo",
                  groups: %{group_type: "group_id"}
                })
@@ -49,7 +50,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:error, :transport_error}
       end)
 
-      assert {:error, :transport_error} = PostHog.FeatureFlags.flags("foo")
+      assert {:error, :transport_error} = FeatureFlags.flags("foo")
     end
 
     test "non-200 is wrapped in error" do
@@ -62,7 +63,7 @@ defmodule PostHog.FeatureFlagsTest do
                 response: %{status: 503},
                 message: "Unexpected response"
               }} =
-               PostHog.FeatureFlags.flags(%{distinct_id: "foo"})
+               FeatureFlags.flags(%{distinct_id: "foo"})
     end
 
     test "unexpected response body" do
@@ -74,7 +75,7 @@ defmodule PostHog.FeatureFlagsTest do
               %PostHog.UnexpectedResponseError{
                 response: "internal server error",
                 message: "Expected response body to have \"flags\" key"
-              }} = PostHog.FeatureFlags.flags(%{distinct_id: "foo"})
+              }} = FeatureFlags.flags(%{distinct_id: "foo"})
     end
 
     @tag config: [supervisor_name: MyPostHog]
@@ -86,7 +87,7 @@ defmodule PostHog.FeatureFlagsTest do
       end)
 
       assert {:ok, %{body: %{"flags" => _}}} =
-               PostHog.FeatureFlags.flags(MyPostHog, %{distinct_id: "foo"})
+               FeatureFlags.flags(MyPostHog, %{distinct_id: "foo"})
     end
   end
 
@@ -104,7 +105,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:ok, %{status: 200, body: %{"flags" => %{"foo" => %{}}}}}
       end)
 
-      assert {:ok, %{"foo" => %{}}} = PostHog.FeatureFlags.flags_for("foo")
+      assert {:ok, %{"foo" => %{}}} = FeatureFlags.flags_for("foo")
     end
 
     test "full request map" do
@@ -115,7 +116,7 @@ defmodule PostHog.FeatureFlagsTest do
       end)
 
       assert {:ok, %{}} =
-               PostHog.FeatureFlags.flags_for(%{
+               FeatureFlags.flags_for(%{
                  distinct_id: "foo",
                  personal_properties: %{foo: "bar"}
                })
@@ -130,7 +131,7 @@ defmodule PostHog.FeatureFlagsTest do
         API.Stub.request(client, method, url, opts)
       end)
 
-      assert {:ok, %{}} = PostHog.FeatureFlags.flags_for()
+      assert {:ok, %{}} = FeatureFlags.flags_for()
     end
 
     test "explicit distinct_id preferred over context" do
@@ -142,7 +143,7 @@ defmodule PostHog.FeatureFlagsTest do
         API.Stub.request(client, method, url, opts)
       end)
 
-      assert {:ok, %{}} = PostHog.FeatureFlags.flags_for("bar")
+      assert {:ok, %{}} = FeatureFlags.flags_for("bar")
     end
 
     test "missing distinct_Id" do
@@ -151,7 +152,7 @@ defmodule PostHog.FeatureFlagsTest do
                 message:
                   "distinct_id is required but wasn't explicitely provided or found in the context"
               }} =
-               PostHog.FeatureFlags.flags_for(nil)
+               FeatureFlags.flags_for(nil)
     end
 
     @tag config: [supervisor_name: MyPostHog]
@@ -163,7 +164,7 @@ defmodule PostHog.FeatureFlagsTest do
       end)
 
       assert {:ok, %{"example-feature-flag-1" => %{}}} =
-               PostHog.FeatureFlags.flags_for(MyPostHog, "foo")
+               FeatureFlags.flags_for(MyPostHog, "foo")
     end
   end
 
@@ -185,7 +186,7 @@ defmodule PostHog.FeatureFlagsTest do
          }}
       end)
 
-      assert {:ok, "variant1"} = PostHog.FeatureFlags.check("myflag", "foo")
+      assert {:ok, "variant1"} = FeatureFlags.check("myflag", "foo")
     end
 
     test "returns true if enabled" do
@@ -193,7 +194,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{"enabled" => true}}}}}
       end)
 
-      assert {:ok, true} = PostHog.FeatureFlags.check("myflag", "foo")
+      assert {:ok, true} = FeatureFlags.check("myflag", "foo")
     end
 
     test "returns false otherwise" do
@@ -201,7 +202,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{}}}}}
       end)
 
-      assert {:ok, false} = PostHog.FeatureFlags.check("myflag", "foo")
+      assert {:ok, false} = FeatureFlags.check("myflag", "foo")
     end
 
     test "full request map" do
@@ -212,7 +213,7 @@ defmodule PostHog.FeatureFlagsTest do
       end)
 
       assert {:ok, true} =
-               PostHog.FeatureFlags.check("example-feature-flag-1", %{
+               FeatureFlags.check("example-feature-flag-1", %{
                  distinct_id: "foo",
                  personal_properties: %{foo: "bar"}
                })
@@ -227,7 +228,7 @@ defmodule PostHog.FeatureFlagsTest do
         API.Stub.request(client, method, url, opts)
       end)
 
-      assert {:ok, true} = PostHog.FeatureFlags.check("example-feature-flag-1")
+      assert {:ok, true} = FeatureFlags.check("example-feature-flag-1")
     end
 
     test "explicit distinct_id preferred over context" do
@@ -239,7 +240,7 @@ defmodule PostHog.FeatureFlagsTest do
         API.Stub.request(client, method, url, opts)
       end)
 
-      assert {:ok, true} = PostHog.FeatureFlags.check("example-feature-flag-1", "bar")
+      assert {:ok, true} = FeatureFlags.check("example-feature-flag-1", "bar")
     end
 
     test "missing distinct_Id" do
@@ -248,7 +249,7 @@ defmodule PostHog.FeatureFlagsTest do
                 message:
                   "distinct_id is required but wasn't explicitely provided or found in the context"
               }} =
-               PostHog.FeatureFlags.check("example-feature-flag-1")
+               FeatureFlags.check("example-feature-flag-1")
     end
 
     test "sets feature flag context" do
@@ -256,7 +257,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{"variant" => "variant1"}}}}}
       end)
 
-      assert {:ok, "variant1"} = PostHog.FeatureFlags.check("myflag", "foo")
+      assert {:ok, "variant1"} = FeatureFlags.check("myflag", "foo")
       assert %{"$feature/myflag" => "variant1"} = PostHog.get_context()
     end
 
@@ -265,7 +266,7 @@ defmodule PostHog.FeatureFlagsTest do
         {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{"variant" => "variant1"}}}}}
       end)
 
-      assert {:ok, "variant1"} = PostHog.FeatureFlags.check("myflag", "foo")
+      assert {:ok, "variant1"} = FeatureFlags.check("myflag", "foo")
 
       assert [
                %{
@@ -284,7 +285,137 @@ defmodule PostHog.FeatureFlagsTest do
         API.Stub.request(client, method, url, opts)
       end)
 
-      assert {:ok, true} = PostHog.FeatureFlags.check(MyPostHog, "example-feature-flag-1", "foo")
+      assert {:ok, true} = FeatureFlags.check(MyPostHog, "example-feature-flag-1", "foo")
+    end
+  end
+
+  describe "check!/3" do
+    test "returns variant if present" do
+      expect(API.Mock, :request, fn _client, method, url, opts ->
+        assert method == :post
+        assert url == "/flags"
+        assert opts[:params] == %{v: 2}
+
+        assert opts[:json] == %{
+                 distinct_id: "foo"
+               }
+
+        {:ok,
+         %{
+           status: 200,
+           body: %{"flags" => %{"myflag" => %{"enabled" => true, "variant" => "variant1"}}}
+         }}
+      end)
+
+      assert "variant1" = FeatureFlags.check!("myflag", "foo")
+    end
+
+    test "returns true if enabled" do
+      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
+        {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{"enabled" => true}}}}}
+      end)
+
+      assert true = FeatureFlags.check!("myflag", "foo")
+    end
+
+    test "returns false otherwise" do
+      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
+        {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{}}}}}
+      end)
+
+      assert false == FeatureFlags.check!("myflag", "foo")
+    end
+
+    test "full request map" do
+      expect(API.Mock, :request, fn client, method, url, opts ->
+        assert opts[:json] == %{distinct_id: "foo", personal_properties: %{foo: "bar"}}
+
+        API.Stub.request(client, method, url, opts)
+      end)
+
+      assert true =
+               FeatureFlags.check!("example-feature-flag-1", %{
+                 distinct_id: "foo",
+                 personal_properties: %{foo: "bar"}
+               })
+    end
+
+    test "distinct_id is taken from the context if not passed" do
+      PostHog.set_context(%{distinct_id: "foo"})
+
+      expect(API.Mock, :request, fn client, method, url, opts ->
+        assert opts[:json] == %{distinct_id: "foo"}
+
+        API.Stub.request(client, method, url, opts)
+      end)
+
+      assert true = FeatureFlags.check!("example-feature-flag-1")
+    end
+
+    test "explicit distinct_id preferred over context" do
+      PostHog.set_context(%{distinct_id: "foo"})
+
+      expect(API.Mock, :request, fn client, method, url, opts ->
+        assert opts[:json] == %{distinct_id: "bar"}
+
+        API.Stub.request(client, method, url, opts)
+      end)
+
+      assert true = FeatureFlags.check!("example-feature-flag-1", "bar")
+    end
+
+    test "missing distinct_id" do
+      assert_raise PostHog.Error, fn ->
+        FeatureFlags.check!("example-feature-flag-1")
+      end
+    end
+
+    test "unexpected body shape" do
+      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
+        {:ok, %{status: 200, body: %{"flags" => %{}}}}
+      end)
+
+      assert_raise PostHog.UnexpectedResponseError,
+                   "Feature flag example-feature-flag-1 was not found in the response\n\n%{\"flags\" => %{}}",
+                   fn ->
+                     FeatureFlags.check!("example-feature-flag-1", "bar")
+                   end
+    end
+
+    test "sets feature flag context" do
+      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
+        {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{"variant" => "variant1"}}}}}
+      end)
+
+      assert "variant1" = FeatureFlags.check!("myflag", "foo")
+      assert %{"$feature/myflag" => "variant1"} = PostHog.get_context()
+    end
+
+    test "publishes $feature_flag_called event " do
+      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
+        {:ok, %{status: 200, body: %{"flags" => %{"myflag" => %{"variant" => "variant1"}}}}}
+      end)
+
+      assert "variant1" = FeatureFlags.check!("myflag", "foo")
+
+      assert [
+               %{
+                 event: "$feature_flag_called",
+                 distinct_id: "foo",
+                 properties: %{"$feature_flag": "myflag", "$feature_flag_response": "variant1"}
+               }
+             ] = all_captured()
+    end
+
+    @tag config: [supervisor_name: MyPostHog]
+    test "custom PostHog instance" do
+      expect(API.Mock, :request, fn client, method, url, opts ->
+        assert opts[:json] == %{distinct_id: "foo"}
+
+        API.Stub.request(client, method, url, opts)
+      end)
+
+      assert true = FeatureFlags.check!(MyPostHog, "example-feature-flag-1", "foo")
     end
   end
 end

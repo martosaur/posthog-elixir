@@ -150,6 +150,10 @@ defmodule PostHog.FeatureFlags do
     end
   end
 
+  @doc false
+  def check!(flag_name, distinct_id_or_body) when not is_atom(flag_name),
+    do: check!(PostHog, flag_name, distinct_id_or_body)
+
   @doc """
   Checks feature flag and returns the variant or raises on error.
 
