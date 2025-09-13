@@ -1,7 +1,4 @@
 defmodule PostHog.FeatureFlags do
-  @type supervisor_name() :: PostHog.supervisor_name()
-  @type distinct_id() :: PostHog.distinct_id()
-
   @doc """
   Make request to [`/flags`](https://posthog.com/docs/api/flags) API.
 
@@ -23,7 +20,7 @@ defmodule PostHog.FeatureFlags do
 
       PostHog.FeatureFlags.flags(MyPostHog, %{distinct_id: "user123"})
   """
-  @spec flags(supervisor_name(), map()) ::
+  @spec flags(PostHog.supervisor_name(), map()) ::
           PostHog.API.Client.response() | {:error, PostHog.Error.t()}
   def flags(name \\ PostHog, body) do
     config = PostHog.config(name)
@@ -76,7 +73,7 @@ defmodule PostHog.FeatureFlags do
 
       PostHog.FeatureFlags.flags_for(MyPostHog, "foo")
   """
-  @spec flags_for(supervisor_name(), distinct_id() | map() | nil) ::
+  @spec flags_for(PostHog.supervisor_name(), PostHog.distinct_id() | map() | nil) ::
           {:ok, map()} | {:error, Exception.t()}
   def flags_for(name \\ PostHog, distinct_id_or_body \\ nil) do
     with {:ok, body} <- body_for_flags(distinct_id_or_body),
@@ -121,7 +118,7 @@ defmodule PostHog.FeatureFlags do
 
       PostHog.check(MyPostHog, "example-feature-flag-1", "user123")
   """
-  @spec check(supervisor_name(), String.t(), distinct_id() | map() | nil) ::
+  @spec check(PostHog.supervisor_name(), String.t(), PostHog.distinct_id() | map() | nil) ::
           {:ok, boolean()} | {:ok, String.t()} | {:error, Exception.t()}
   def check(name \\ PostHog, flag_name, distinct_id_or_body \\ nil) do
     with {:ok, %{distinct_id: distinct_id} = body} <- body_for_flags(distinct_id_or_body),
@@ -187,7 +184,7 @@ defmodule PostHog.FeatureFlags do
       iex> PostHog.FeatureFlags.check!("example-feature-flag-3", "user123")
       ** (PostHog.UnexpectedResponseError) Feature flag example-feature-flag-3 was not found in the response
   """
-  @spec check!(supervisor_name(), String.t(), distinct_id() | map() | nil) ::
+  @spec check!(PostHog.supervisor_name(), String.t(), PostHog.distinct_id() | map() | nil) ::
           boolean() | String.t() | no_return()
   def check!(name \\ PostHog, flag_name, distinct_id_or_body \\ nil) do
     case check(name, flag_name, distinct_id_or_body) do
