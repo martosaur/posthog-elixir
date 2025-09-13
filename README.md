@@ -177,14 +177,34 @@ setup instructions, consult the [advanced configuration guide](guides/advanced-c
 
 ## Developing locally
 
-To develop locally:
+You should be able to fetch dependencies and run tests right away:
 
-1. Create your integration config by running the following. You can update it accordingly.
-
-```shell
-cp config/integration.example.exs config/integration.exs
-cp config/test.exs config/dev.exs
+```
+mix deps.get
+mix test
 ```
 
-2. Install required dependencies with `asdf install`
-3. Install mix dependencies with `mix deps.get`
+To run integration test suite that sends real events to the API:
+
+1. Create a test PostHog project and obtain an API key.
+2. Create `config/integration.exs` config that will be used for integration tests:
+  ```
+  cp config/integration.example.exs config/integration.exs
+  ```
+3. Put API key into `config/integration.exs`
+4. Run integration tests
+  ```
+  mix test --only integration
+  ```
+
+If you want to play with PostHog events in IEx, you'll need to create
+`config/dev.exs` and configure your dev instance to your liking. Here a
+minimal example:
+
+```elixir
+import Config
+
+config :posthog,
+  public_url: "https://us.i.posthog.com",
+  api_key: "phc_XXXX"
+```

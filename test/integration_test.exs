@@ -1,4 +1,7 @@
 defmodule PostHog.IntegrationTest do
+  # Note that this test suite lacks assertions and is meant to assist with
+  # manual testing. There is not much point in running all tests in it at once.
+  # Instead, pick one test and iterate over it while checking PostHog UI.
   require Config
   use ExUnit.Case, async: false
 
@@ -9,13 +12,13 @@ defmodule PostHog.IntegrationTest do
   setup_all do
     {:ok, config} =
       Application.fetch_env!(:posthog, :integration_config) |> PostHog.Config.validate()
-
-    start_link_supervised!({PostHog.Supervisor, config})
+      
+    start_link_supervised!({PostHog.Supervisor, Map.put(config, :sender_pool_size, 1)})
 
     wait = fn ->
       sender_pid =
         config.supervisor_name
-        |> PostHog.Registry.via(PostHog.Sender)
+        |> PostHog.Registry.via(PostHog.Sender, 1)
         |> GenServer.whereis()
 
       send(sender_pid, :batch_time_reached)
