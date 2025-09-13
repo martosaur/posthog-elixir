@@ -141,7 +141,7 @@ iex> PostHog.FeatureFlags.check("example-feature-flag-3", "user123")
 {:error, %PostHog.UnexpectedResponseError{message: "Feature flag example-feature-flag-3 was not found in the response", response: ...}}
 ```
 
-If you're feeling adventurous and/or is simply writing a script you can use the `Posthog.FeatureFlags.check!/2` helper instead and it will return a boolean or raise an error.
+If you're feeling adventurous and/or is simply writing a script you can use the `PostHog.FeatureFlags.check!/2` helper instead and it will return a boolean or raise an error.
 
 ```elixir
 # Simple boolean feature flag
