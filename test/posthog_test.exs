@@ -1,5 +1,5 @@
 defmodule PostHogTest do
-  use PostHog.Case, async: true
+  use PostHog.Case, async: true, group: PostHog
 
   @moduletag config: [supervisor_name: PostHog]
 
