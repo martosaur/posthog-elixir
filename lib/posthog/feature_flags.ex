@@ -195,22 +195,16 @@ defmodule PostHog.FeatureFlags do
     end
   end
 
-  @doc false
-  @spec log_feature_flag_usage(supervisor_name(), String.t(), String.t(), {:ok, boolean() | String.t()} | {:error, Exception.t()}) :: :ok
-  defp log_feature_flag_usage(name, distinct_id, flag_name, result)
-  defp log_feature_flag_usage(name, distinct_id, flag_name, {:ok, variant}) do
-    PostHog.capture(name, "$feature_flag_called", %{
-      distinct_id: distinct_id,
-      "$feature_flag": flag_name,
-      "$feature_flag_response": variant
-    })
+  defp log_feature_flag_usage(name, distinct_id, flag_name, result) do
+    with {:ok, variant} <- result do
+      PostHog.capture(name, "$feature_flag_called", %{
+        distinct_id: distinct_id,
+        "$feature_flag": flag_name,
+        "$feature_flag_response": variant
+      })
 
-    PostHog.set_context(name, %{"$feature/#{flag_name}" => variant})
-  end
-
-  defp log_feature_flag_usage(_name, _distinct_id, _flag_name, {:error, _error}) do
-    # Do nothing for error cases
-    :ok
+      PostHog.set_context(name, %{"$feature/#{flag_name}" => variant})
+    end
   end
 
   @doc false
