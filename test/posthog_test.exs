@@ -85,6 +85,24 @@ defmodule PostHogTest do
       assert %{foo: "bar", "$lib": "posthog-elixir", "$lib_version": _} = properties
       refute properties[:hello]
     end
+
+    test "encodes properties for safe json serialization" do
+      PostHog.bare_capture("case tested", "distinct_id", %{
+        struct: %LoggerHandlerKit.FakeStruct{},
+        ref: make_ref()
+      })
+
+      assert [event] = all_captured()
+
+      assert %{
+               event: "case tested",
+               distinct_id: "distinct_id",
+               properties: %{struct: %{hello: nil}, ref: _} = properties,
+               timestamp: _
+             } = event
+
+      JSON.encode!(properties)
+    end
   end
 
   describe "capture/4" do

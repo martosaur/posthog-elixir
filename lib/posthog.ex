@@ -59,7 +59,11 @@ defmodule PostHog do
   @spec bare_capture(supervisor_name(), event(), distinct_id(), properties()) :: :ok
   def bare_capture(name \\ __MODULE__, event, distinct_id, properties \\ %{}) do
     config = PostHog.Registry.config(name)
-    properties = Map.merge(properties, config.global_properties)
+
+    properties =
+      properties
+      |> Map.merge(config.global_properties)
+      |> LoggerJSON.Formatter.RedactorEncoder.encode([])
 
     event = %{
       event: event,
