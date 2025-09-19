@@ -5,7 +5,7 @@ defmodule PostHog.HandlerTest do
 
   @moduletag capture_log: true
 
-  setup {LoggerHandlerKit.Arrange, :ensure_per_handler_translation}
+  setup_all {LoggerHandlerKit.Arrange, :ensure_per_handler_translation}
   setup :setup_supervisor
   setup :setup_logger_handler
 

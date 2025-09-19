@@ -23,7 +23,7 @@ defmodule PostHog do
   Retrieve the default `PostHog` instance config:
 
       %{supervisor_name: PostHog} = PostHog.config()
-      
+
   Retrieve named instance config:
 
       %{supervisor_name: MyPostHog} = PostHog.config(MyPostHog)
@@ -47,12 +47,12 @@ defmodule PostHog do
   Capture a simple event:
 
       PostHog.bare_capture("event_captured", "user123")
-      
+
   Capture an event with properties:
 
       PostHog.bare_capture("event_captured", "user123", %{backend: "Phoenix"})
-      
-      Capture through a named PostHog instance:
+
+  Capture through a named PostHog instance:
 
       PostHog.bare_capture(MyPostHog, "event_captured", "user123")
   """
@@ -91,8 +91,8 @@ defmodule PostHog do
 
       PostHog.set_context(%{distinct_id: "user123", "$feature/my-feature-flag": true})
       PostHog.capture("job_started", %{job_name: "JobName"})
-      
-      Set context and capture an event through a named PostHog instance:
+
+  Set context and capture an event through a named PostHog instance:
 
       PostHog.set_context(MyPostHog, %{distinct_id: "user123", "$feature/my-feature-flag": true})
       PostHog.capture(MyPostHog, "job_started", %{job_name: "JobName"})
@@ -110,19 +110,6 @@ defmodule PostHog do
     end
   end
 
-  @spec get_feature_flag(supervisor_name(), distinct_id() | map()) ::
-          PostHog.API.Client.response()
-  def get_feature_flag(name \\ __MODULE__, distinct_id_or_body) do
-    body =
-      case distinct_id_or_body do
-        %{} = body -> body
-        distinct_id -> %{distinct_id: distinct_id}
-      end
-
-    config = config(name)
-    PostHog.API.flags(config.api_client, body)
-  end
-
   @doc """
   Sets context for the current process.
 
@@ -136,8 +123,8 @@ defmodule PostHog do
 
   Set and retrieve context for a named PostHog instance:
 
-  > PostHog.set_context(MyPostHog, %{foo: "bar"})
-  > PostHog.get_context(MyPostHog)
+      > PostHog.set_context(MyPostHog, %{foo: "bar"})
+      > PostHog.get_context(MyPostHog)
       %{foo: "bar"}
   """
   @spec set_context(supervisor_name(), properties()) :: :ok
@@ -153,11 +140,11 @@ defmodule PostHog do
       > PostHog.set_event_context("$exception", %{foo: "bar"})
       > PostHog.get_event_context("$exception")
       %{foo: "bar"}
-     
+
   Set and retrieve context for a specific event through a named PostHog instance:
 
-  > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
-  > PostHog.get_event_context(MyPostHog, "$exception")
+      > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
+      > PostHog.get_event_context(MyPostHog, "$exception")
       %{foo: "bar"}
   """
   @spec set_event_context(supervisor_name(), event(), properties()) :: :ok
@@ -174,11 +161,11 @@ defmodule PostHog do
       > PostHog.set_context(%{foo: "bar"})
       > PostHog.get_context()
       %{foo: "bar"}
-      
+
   Set and retrieve context for a named PostHog instance:
 
-  > PostHog.set_context(MyPostHog, %{foo: "bar"})
-  > PostHog.get_context(MyPostHog)
+      > PostHog.set_context(MyPostHog, %{foo: "bar"})
+      > PostHog.get_context(MyPostHog)
       %{foo: "bar"}
   """
   @spec get_context(supervisor_name()) :: properties()
@@ -194,11 +181,11 @@ defmodule PostHog do
       > PostHog.set_event_context("$exception", %{foo: "bar"})
       > PostHog.get_event_context("$exception")
       %{foo: "bar"}
-     
+
   Set and retrieve context for a specific event through a named PostHog instance:
 
-  > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
-  > PostHog.get_event_context(MyPostHog, "$exception")
+      > PostHog.set_event_context(MyPostHog, "$exception", %{foo: "bar"})
+      > PostHog.get_event_context(MyPostHog, "$exception")
       %{foo: "bar"}
   """
   @spec get_event_context(supervisor_name()) :: properties()

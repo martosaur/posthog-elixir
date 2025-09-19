@@ -7,12 +7,12 @@ A powerful Elixir SDK for [PostHog](https://posthog.com)
 
 ## Features
 
-* Analytics and Feature Flags support
-* Error tracking support
-* Powerful process-based context propagation
-* Asynchronous event sending with built-in batching
-* Overridable HTTP client
-* Support for multiple PostHog projects
+- Analytics and Feature Flags support
+- Error tracking support
+- Powerful process-based context propagation
+- Asynchronous event sending with built-in batching
+- Overridable HTTP client
+- Support for multiple PostHog projects
 
 ## Getting Started
 
@@ -111,51 +111,58 @@ iex> PostHog.get_event_context("sensitive_event")
 
 ## Feature Flags
 
-`PostHog.get_feature_flag/2` is a thin wrapper over the `/flags` API request:
+`PostHog.FeatureFlags.check/2` is the main function for checking a feature flag.
 
 ```elixir
-# With just distinct_id
-iex> PostHog.get_feature_flag("distinct_id_of_the_user")
-{:ok, %Req.Response{status: 200, body: %{"flags" => %{...}}}}
+# Simple boolean feature flag
+iex> PostHog.FeatureFlags.check("example-feature-flag-1", "user123")
+{:ok, true}
 
-# With group id for group-based feature flags
-iex> PostHog.get_feature_flag(%{distinct_id: "distinct_id_of_the_user", groups: %{group_type: "group_id"}})
-{:ok, %Req.Response{status: 200, body: %{"flags" => %{}}}}
+# Note how it automatically sets `$feature/example-feature-flag-1` property in the context
+iex> PostHog.get_context()
+%{"$feature/example-feature-flag-1" => true}
+
+# It will attempt to take distinct_id from the context if it's not provided
+iex> PostHog.set_context(%{distinct_id: "user123"})
+:ok
+iex> PostHog.FeatureFlags.check("example-feature-flag-1")
+{:ok, true}
+
+# You can also pass a map with body parameters that will be sent to the /flags API as-is
+iex> PostHog.FeatureFlags.check("example-feature-flag-1", %{distinct_id: "user123", groups: %{group_type: "group_id"}})
+{:ok, true}
+
+# It returns variant if it's set
+iex> PostHog.FeatureFlags.check("example-feature-flag-2", "user123")
+{:ok, "variant2"}
+
+# Returns error if feature flag doesn't exist
+iex> PostHog.FeatureFlags.check("example-feature-flag-3", "user123")
+{:error, %PostHog.UnexpectedResponseError{message: "Feature flag example-feature-flag-3 was not found in the response", response: ...}}
 ```
 
-Checking for a feature flag is not a trivial operation and comes in all shapes
-and sizes, so users are encouraged to write their own helper function for that.
-Here's an example of what it might look like:
+If you're feeling adventurous and/or is simply writing a script you can use the `PostHog.FeatureFlags.check!/2` helper instead and it will return a boolean or raise an error.
 
 ```elixir
-defmodule MyApp.PostHogHelper do
-  def feature_flag(flag_name, distinct_id \\ nil) do
-    distinct_id = distinct_id || PostHog.get_context() |> Map.fetch!(:distinct_id)
-    
-    response = 
-      case PostHog.get_feature_flag(distinct_id) do
-        {:ok, %{status: 200, body: %{"flags" => %{^flag_name => %{"variant" => variant}}}}} when not is_nil(variant) -> variant
-        {:ok, %{status: 200, body: %{"flags" => %{^flag_name => %{"enabled" => true}}}}} -> true
-        _ -> false
-      end
-    
-    PostHog.capture("$feature_flag_called", %{
-      distinct_id: distinct_id,
-      "$feature_flag": flag_name,
-      "$feature_flag_response": response
-    })
+# Simple boolean feature flag
+iex> PostHog.FeatureFlags.check!("example-feature-flag-1", "user123")
+true
 
-    PostHog.set_context(%{"$feature/#{flag_name}" => response})
-    response
-  end
-end
+# Works for variants too
+iex> PostHog.FeatureFlags.check!("example-feature-flag-2", "user123")
+"variant2"
+
+
+# Raises error if feature flag doesn't exist
+iex> PostHog.FeatureFlags.check!("example-feature-flag-3", "user123")
+** (PostHog.UnexpectedResponseError) Feature flag example-feature-flag-3 was not found in the response
 ```
 
 ## Error Tracking
 
 Error Tracking is enabled by default.
 
-![](assets/screenshot.png)
+![](assets/error-tracking-screenshot.png)
 
 You can always disable it by setting `enable_error_tracking` to false:
 
@@ -166,4 +173,38 @@ config :posthog, enable_error_tracking: false
 ## Multiple PostHog Projects
 
 If your app works with multiple PostHog projects, PostHog can accommodate you. For
-setup instructions, consult the [advanced configuration guide](advanced-configuration.md).
+setup instructions, consult the [advanced configuration guide](guides/advanced-configuration.md).
+
+## Developing locally
+
+You should be able to fetch dependencies and run tests right away:
+
+```
+mix deps.get
+mix test
+```
+
+To run integration test suite that sends real events to the API:
+
+1. Create a test PostHog project and obtain an API key.
+2. Create `config/integration.exs` config that will be used for integration tests:
+  ```
+  cp config/integration.example.exs config/integration.exs
+  ```
+3. Put API key into `config/integration.exs`
+4. Run integration tests
+  ```
+  mix test --only integration
+  ```
+
+If you want to play with PostHog events in IEx, you'll need to create
+`config/dev.exs` and configure your dev instance to your liking. Here a
+minimal example:
+
+```elixir
+import Config
+
+config :posthog,
+  public_url: "https://us.i.posthog.com",
+  api_key: "phc_XXXX"
+```

@@ -1,11 +1,9 @@
 defmodule PostHogTest do
-  use PostHog.Case, async: true
+  use PostHog.Case, async: true, group: PostHog
 
   @moduletag config: [supervisor_name: PostHog]
 
   import Mox
-
-  alias PostHog.API
 
   setup :setup_supervisor
   setup :verify_on_exit!
@@ -182,65 +180,6 @@ defmodule PostHogTest do
                },
                timestamp: _
              } = event
-    end
-  end
-
-  describe "get_feature_flag/2" do
-    test "returns body on success" do
-      expect(API.Mock, :request, fn _client, method, url, opts ->
-        assert method == :post
-        assert url == "/flags"
-        assert opts[:params] == %{v: 2}
-
-        assert opts[:json] == %{
-                 distinct_id: "foo"
-               }
-
-        {:ok, %{status: 200, body: "body"}}
-      end)
-
-      assert {:ok, %{status: 200, body: "body"}} = PostHog.get_feature_flag("foo")
-    end
-
-    test "sophisticated body" do
-      expect(API.Mock, :request, fn client, method, url, opts ->
-        assert opts[:json] == %{
-                 distinct_id: "foo",
-                 groups: %{group_type: "group_id"}
-               }
-
-        API.Stub.request(client, method, url, opts)
-      end)
-
-      assert {:ok, %{}} =
-               PostHog.get_feature_flag(%{distinct_id: "foo", groups: %{group_type: "group_id"}})
-    end
-
-    test "errors passed as is" do
-      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
-        {:error, :transport_error}
-      end)
-
-      assert {:error, :transport_error} = PostHog.get_feature_flag("foo")
-    end
-
-    test "non-200 is wrapped in error" do
-      expect(API.Mock, :request, fn _client, _method, _url, _opts ->
-        {:ok, %{status: 503}}
-      end)
-
-      assert {:ok, %{status: 503}} = PostHog.get_feature_flag("foo")
-    end
-
-    @tag config: [supervisor_name: MyPostHog]
-    test "custom PostHog instance" do
-      expect(API.Mock, :request, fn client, method, url, opts ->
-        assert opts[:json] == %{distinct_id: "foo"}
-
-        API.Stub.request(client, method, url, opts)
-      end)
-
-      assert {:ok, %{}} = PostHog.get_feature_flag(MyPostHog, "foo")
     end
   end
 
