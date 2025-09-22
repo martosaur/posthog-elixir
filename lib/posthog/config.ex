@@ -70,6 +70,11 @@ defmodule PostHog.Config do
 
   @compiled_configuration_schema NimbleOptions.new!(@configuration_schema)
   @compiled_convenience_schema NimbleOptions.new!(@convenience_schema)
+  
+  @system_global_properties %{
+    "$lib": "posthog-elixir",
+    "$lib_version": Mix.Project.config()[:version]
+  }
 
   @moduledoc """
   PostHog configuration
@@ -139,12 +144,7 @@ defmodule PostHog.Config do
     with {:ok, validated} <- NimbleOptions.validate(options, @compiled_configuration_schema) do
       config = Map.new(validated)
       client = config.api_client_module.client(config.api_key, config.public_url)
-
-      global_properties =
-        Map.merge(config.global_properties, %{
-          "$lib": "posthog-elixir",
-          "$lib_version": Application.spec(:posthog, :vsn) |> to_string()
-        })
+      global_properties = Map.merge(config.global_properties, @system_global_properties)
 
       final_config =
         config
