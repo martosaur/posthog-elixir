@@ -32,9 +32,10 @@ defmodule PostHog.Config do
                             doc: "Name of the supervisor process running PostHog"
                           ],
                           metadata: [
-                            type: {:list, :atom},
+                            type: {:or, [{:list, :atom}, {:in, [:all]}]},
                             default: [],
-                            doc: "List of metadata keys to include in event properties"
+                            doc:
+                              "List of Logger metadata keys to include in event properties. Set to `:all` to include all metadata. This only affects Error Tracking events."
                           ],
                           capture_level: [
                             type: {:or, [{:in, Logger.levels()}, nil]},

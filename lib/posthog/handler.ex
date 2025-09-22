@@ -49,7 +49,13 @@ defmodule PostHog.Handler do
 
     metadata =
       log_event.meta
-      |> Map.take([:distinct_id | config.metadata])
+      |> then(fn metadata ->
+        if config.metadata == :all do
+          Map.delete(metadata, Context.logger_metadata_key())
+        else
+          Map.take(metadata, [:distinct_id | config.metadata])
+        end
+      end)
       |> Map.drop(["$exception_list"])
       |> LoggerJSON.Formatter.RedactorEncoder.encode([])
 
