@@ -42,6 +42,11 @@ defmodule PostHog.Config do
                             doc:
                               "Minimum level for logs that should be captured as errors. Errors with `crash_reason` are always captured."
                           ],
+                          global_properties: [
+                            type: :map,
+                            default: %{},
+                            doc: "Map of properties that should be added to all events"
+                          ],
                           in_app_otp_apps: [
                             type: {:list, :atom},
                             default: [],
@@ -135,6 +140,12 @@ defmodule PostHog.Config do
       config = Map.new(validated)
       client = config.api_client_module.client(config.api_key, config.public_url)
 
+      global_properties =
+        Map.merge(config.global_properties, %{
+          "$lib": "posthog-elixir",
+          "$lib_version": Application.spec(:posthog, :vsn) |> to_string()
+        })
+
       final_config =
         config
         |> Map.put(:api_client, client)
@@ -142,10 +153,7 @@ defmodule PostHog.Config do
           :in_app_modules,
           config.in_app_otp_apps |> Enum.flat_map(&Application.spec(&1, :modules)) |> MapSet.new()
         )
-        |> Map.put(:global_properties, %{
-          "$lib": "posthog-elixir",
-          "$lib_version": Application.spec(:posthog, :vsn) |> to_string()
-        })
+        |> Map.put(:global_properties, global_properties)
 
       {:ok, final_config}
     end
