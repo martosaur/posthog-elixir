@@ -26,7 +26,7 @@ defmodule PostHog.Integrations.Plug do
   @doc false
   def call(conn, _opts) do
     context = conn_to_context(conn)
-    PostHog.Context.set(:all, "$exception", context)
+    PostHog.Context.set(:all, :all, context)
 
     conn
   end

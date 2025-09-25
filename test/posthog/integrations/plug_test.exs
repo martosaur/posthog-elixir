@@ -25,7 +25,7 @@ defmodule PostHog.Integrations.PlugTest do
     conn = Plug.Test.conn(:get, "https://posthog.com/foo?bar=10")
     assert PostHog.Integrations.Plug.call(conn, nil)
 
-    assert PostHog.Context.get(:all, "$exception") == %{
+    assert PostHog.Context.get(:all) == %{
              "$current_url": "https://posthog.com/foo?bar=10",
              "$host": "posthog.com",
              "$ip": "127.0.0.1",
