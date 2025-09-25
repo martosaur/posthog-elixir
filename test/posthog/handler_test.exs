@@ -917,6 +917,39 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
+  @tag config: [metadata: :all]
+  test "exports all metadata if configured", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
+    PostHog.set_context(supervisor_name, %{should: "work"})
+    PostHog.set_context(%{shouldnt: "work"})
+    Logger.metadata(foo: "bar")
+    Logger.error("Error with metadata", hello: "world")
+    LoggerHandlerKit.Assert.assert_logged(ref)
+
+    assert [event] = all_captured(supervisor_name)
+
+    assert %{
+             event: "$exception",
+             properties:
+               %{
+                 hello: "world",
+                 foo: "bar",
+                 should: "work",
+                 "$exception_list": [
+                   %{
+                     type: "Error with metadata",
+                     value: "Error with metadata",
+                     mechanism: %{handled: true}
+                   }
+                 ]
+               } = properties
+           } = event
+
+    refute Map.has_key?(properties, :shouldnt)
+  end
+
   @tag config: [metadata: [:extra]]
   test "ensures metadata is serializable", %{
     handler_ref: ref,

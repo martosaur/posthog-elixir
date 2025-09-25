@@ -3,6 +3,8 @@ defmodule PostHog.Context do
 
   @logger_metadata_key :__posthog__
 
+  def logger_metadata_key(), do: @logger_metadata_key
+
   def set(name_scope, event_scope \\ :all, context) do
     metadata =
       with :undefined <- :logger.get_process_metadata(), do: %{}
