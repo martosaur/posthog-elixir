@@ -33,6 +33,7 @@ defmodule PostHog.HandlerTest do
            } = event
   end
 
+  @tag config: [global_properties: %{foo: "bar"}]
   test "always exports global context", %{
     handler_ref: ref,
     config: %{supervisor_name: supervisor_name}
@@ -47,6 +48,7 @@ defmodule PostHog.HandlerTest do
              properties: %{
                "$lib": "posthog-elixir",
                "$lib_version": _,
+               foo: "bar",
                "$exception_list": [
                  %{
                    type: "Hello World",

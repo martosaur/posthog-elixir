@@ -46,6 +46,30 @@ defmodule PostHogTest do
              } = event
     end
 
+    @tag config: [
+           global_properties: %{egg: "spam", struct: %LoggerHandlerKit.FakeStruct{}},
+           supervisor_name: PostHog
+         ]
+    test "adds global properties" do
+      PostHog.bare_capture("case tested", "distinct_id")
+
+      assert [event] = all_captured()
+
+      assert %{
+               event: "case tested",
+               distinct_id: "distinct_id",
+               properties: %{
+                 egg: "spam",
+                 struct: %{hello: nil},
+                 "$lib": "posthog-elixir",
+                 "$lib_version": _
+               },
+               timestamp: _
+             } = event
+
+      JSON.encode!(event)
+    end
+
     @tag config: [supervisor_name: CustomPostHog]
     test "simple call for custom supervisor" do
       PostHog.bare_capture(CustomPostHog, "case tested", "distinct_id")
