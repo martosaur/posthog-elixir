@@ -37,7 +37,14 @@ config :posthog,
   in_app_otp_apps: [:my_app]
 ```
 
-Optionally, enable [Plug integration](`PostHog.Integrations.Plug`) for better Error Tracking
+For test environment, you want to enable test_mode:
+
+```elixir
+config :posthog,
+  test_mode: true
+```
+
+Optionally, enable [Plug integration](`PostHog.Integrations.Plug`).
 
 You're all set! 🎉 For more information on configuration, check the `PostHog.Config` module
 documentation and the [advanced configuration guide](advanced-configuration.md).

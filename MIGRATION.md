@@ -4,7 +4,38 @@ This is a migration guide for all major version bumps
 
 ## v1 -> v2
 
-TODO: New library
+Version 2.0 is a whole new library, so we encourage you to use this upgrade as
+an opportunity to revisit your PostHog usage in your application. Even the root
+level module was renamed from `Posthog` to `PostHog`.
+
+### Configuration
+
+Configuration has been completely reworked. We advice you to remove your
+existing configuration and follow [Getting Started](README.md#getting-started)
+section for setup.
+
+### Event Capture
+
+`PostHog.capture` signature has changed. It now accepts properties only as a
+map. `distinct_id` is included in the properties:
+
+```elixir
+PostHog.capture("user_signed_up", %{
+  distinct_id: "distinct_id_of_the_user",
+  login_type: "email",
+  is_free_trial: true
+})
+```
+
+No additional options can be passed. PostHog automatically offloads events to a
+pool of sender workers that will batch and send your events. This also means
+that `Posthog.batch` is gone.
+
+### Feature Flags
+
+`Posthog.feature_flag` and `Posthog.feature_flag_enabled` functions were
+replaced with `PostHog.FeatureFlags` module. Check its docs for the new usage
+guidelines.
 
 ## v0 -> v1
 

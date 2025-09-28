@@ -1,3 +1,20 @@
+## 2.0.0 - 2025-
+
+### Major Release
+
+`posthog-elixir` was fully reworked. Check [migration guide](MIGRATION.md#v1-v2)
+for some tips on how to upgrade.
+
+### What's new
+
+- Event capture is now offloaded to background workers with automatic batching
+- [Context](README.md#context) mechanism for easier property propagation
+- [Error Tracking](README.md#error-tracking) support
+- New `PostHog.FeatureFlags` module for working with feature flags
+- [Test mode](`PostHog.Test`) for easier testing
+- Customizable [HTTP client](`PostHog.API.Client`) with Req as the default
+- [Plug integration](`PostHog.Integrations.Plug`) for automatically capturing common HTTP properties
+
 ## 1.1.0 - 2025-07-01
 
 - Expose `capture/2` `b077aba849126c63f1c7a82b6ad9d21945871a4a`
