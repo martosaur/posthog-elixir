@@ -74,7 +74,7 @@ def application do
   end
 ```
 
-2. Or, if you're already using an Application, you can add add `PostHog.Application` to your own supervision tree:
+2. Or, if you're already using an Application, you can add add `Posthog.Application` to your own supervision tree:
 
 ```elixir
 # lib/my_app/application.ex

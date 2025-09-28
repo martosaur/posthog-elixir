@@ -52,7 +52,7 @@ defmodule PostHog.MixProject do
         Integrations: [PostHog.Integrations.Plug],
         Testing: [PostHog.Test]
       ],
-      skip_undefined_reference_warnings_on: ["CHANGELOG.md", "MIGRATION.md"]
+      skip_code_autolink_to: &String.starts_with?(&1, "Posthog")
     ]
   end
 
