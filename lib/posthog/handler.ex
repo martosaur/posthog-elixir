@@ -57,7 +57,7 @@ defmodule PostHog.Handler do
         end
       end)
       |> Map.drop(["$exception_list"])
-      |> LoggerJSON.Formatter.RedactorEncoder.encode([])
+      |> maybe_update_file_key()
 
     Context.get(config.supervisor_name, "$exception")
     |> enrich_context(log_event)
@@ -160,4 +160,12 @@ defmodule PostHog.Handler do
   end
 
   defp enrich_context(context, _log_event), do: context
+
+  defp maybe_update_file_key(%{file: chardata} = metadata) when is_list(chardata) do
+    Map.update!(metadata, :file, &IO.chardata_to_string/1)
+  rescue
+    _ -> metadata
+  end
+
+  defp maybe_update_file_key(metadata), do: metadata
 end

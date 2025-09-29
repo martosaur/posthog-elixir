@@ -950,6 +950,29 @@ defmodule PostHog.HandlerTest do
     refute Map.has_key?(properties, :shouldnt)
   end
 
+  @tag config: [metadata: :all]
+  test "updates file metadata to be a string", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
+    Logger.error("Error with default metadata")
+    LoggerHandlerKit.Assert.assert_logged(ref)
+
+    assert [%{properties: %{file: file}}] = all_captured(supervisor_name)
+    assert is_binary(file)
+  end
+
+  @tag config: [metadata: :all]
+  test "noop if file is non chardata", %{
+    handler_ref: ref,
+    config: %{supervisor_name: supervisor_name}
+  } do
+    Logger.error("Error with default metadata", file: 123)
+    LoggerHandlerKit.Assert.assert_logged(ref)
+
+    assert [%{properties: %{file: 123}}] = all_captured(supervisor_name)
+  end
+
   @tag config: [metadata: [:extra]]
   test "ensures metadata is serializable", %{
     handler_ref: ref,
