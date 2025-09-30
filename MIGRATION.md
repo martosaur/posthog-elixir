@@ -10,14 +10,14 @@ level module was renamed from `Posthog` to `PostHog`.
 
 ### Configuration
 
-Configuration has been completely reworked. We advice you to remove your
+Configuration has been completely reworked. We advise you to remove your
 existing configuration and follow [Getting Started](README.md#getting-started)
 section for setup.
 
 ### Event Capture
 
 `PostHog.capture` signature has changed. It now accepts properties only as a
-map. `distinct_id` is included in the properties:
+map. `distinct_id` is now included in the properties.
 
 ```elixir
 PostHog.capture("user_signed_up", %{
@@ -27,9 +27,9 @@ PostHog.capture("user_signed_up", %{
 })
 ```
 
-No additional options can be passed. PostHog automatically offloads events to a
+No additional options can be passed. PostHog now automatically offloads events to a
 pool of sender workers that will batch and send your events. This also means
-that `Posthog.batch` is gone.
+that `Posthog.batch` doesn't exist anymore and you should simply call `capture/2` for each of your events.
 
 ### Feature Flags
 
@@ -39,7 +39,7 @@ guidelines.
 
 ## v0 -> v1
 
-When we stabilized our library, we decided to pull some breaking changes, here are they and how you can migrate:
+When we stabilized our library, we decided to pull some breaking changes.
 
 ### Minimum Elixir version bumped to v1.14
 
@@ -50,9 +50,9 @@ The library previously supported Elixir v1.12+. You'll need to migrate to Elixir
 
 ### Decide v4 - Feature Flags
 
-PostHog is consistently upgrading our internal data representation so that's better for customers each and every time. We've recently launched a new version of our `/decide` endpoint called `v4`. This endpoint is slightly different, which caused a small change in behavior for our flags.
+PostHog is consistently upgrading our internal data representation so that it's better for users each and every time. We've recently launched a new version of our `/decide` endpoint called `v4`. This endpoint is slightly different, which caused a small change in behavior for our flags.
 
-`PostHog.FeatureFlag` previously included a key `value` that to represent the internal structure of a flag. It was renamed to `payload` to:
+`PostHog.FeatureFlag` previously included a key `value` to represent the internal structure of a flag. It was renamed to `payload` to:
 
 1. better represent the fact that it can be both an object and a boolean
 2. align it more closely with our other SDKs
@@ -74,7 +74,7 @@ def application do
   end
 ```
 
-2. Or, if you're already using an Application, you can add add `Posthog.Application` to your own supervision tree:
+2. Or, if you're already using an Application, you can add `Posthog.Application` to your own supervision tree:
 
 ```elixir
 # lib/my_app/application.ex

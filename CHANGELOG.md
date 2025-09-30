@@ -1,12 +1,15 @@
-## 2.0.0 - 2025-
+## 2.0.0 - 2025-09-30
 
 ### Major Release
 
 `posthog-elixir` was fully reworked. Check [migration guide](MIGRATION.md#v1-v2)
 for some tips on how to upgrade.
 
+Huge thanks to community member [@martosaur](https://github.com/martosaur) for contributing this new version.
+
 ### What's new
 
+- Elixir v1.15+ required
 - Event capture is now offloaded to background workers with automatic batching
 - [Context](README.md#context) mechanism for easier property propagation
 - [Error Tracking](README.md#error-tracking) support

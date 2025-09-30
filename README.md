@@ -21,7 +21,7 @@ Add `PostHog` to your dependencies:
 ```elixir
 def deps do
   [
-    {:posthog, "~> 0.3"}
+    {:posthog, "~> 2.0"}
   ]
 end
 ```
@@ -195,14 +195,17 @@ To run integration test suite that sends real events to the API:
 
 1. Create a test PostHog project and obtain an API key.
 2. Create `config/integration.exs` config that will be used for integration tests:
-  ```
-  cp config/integration.example.exs config/integration.exs
-  ```
+
+```
+cp config/integration.example.exs config/integration.exs
+```
+
 3. Put API key into `config/integration.exs`
 4. Run integration tests
-  ```
-  mix test --only integration
-  ```
+
+```
+mix test --only integration
+```
 
 If you want to play with PostHog events in IEx, you'll need to create
 `config/dev.exs` and configure your dev instance to your liking. Here a
