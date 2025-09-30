@@ -22,7 +22,7 @@ defmodule PostHog.Case do
       ]
       |> Keyword.merge(context[:config] || [])
       |> PostHog.Config.validate!()
-      |> Map.put(:max_batch_time_ms, to_timeout(60_000))
+      |> Map.put(:max_batch_time_ms, :timer.minutes(1))
       |> Map.put(:max_batch_events, 100)
 
     start_link_supervised!({PostHog.Supervisor, config})
