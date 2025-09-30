@@ -8,7 +8,7 @@ defmodule PostHog.Config do
   ]
 
   @configuration_schema [
-                          public_url: [
+                          api_host: [
                             type: :string,
                             required: true,
                             doc:
@@ -144,7 +144,7 @@ defmodule PostHog.Config do
   def validate(options) do
     with {:ok, validated} <- NimbleOptions.validate(options, @compiled_configuration_schema) do
       config = Map.new(validated)
-      client = config.api_client_module.client(config.api_key, config.public_url)
+      client = config.api_client_module.client(config.api_key, config.api_host)
       global_properties = Map.merge(config.global_properties, @system_global_properties)
 
       final_config =

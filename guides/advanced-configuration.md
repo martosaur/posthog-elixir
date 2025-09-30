@@ -7,7 +7,7 @@ This behavior is configured by the `:posthog` option in your global configuratio
 config :posthog,
   enable: true,
   enable_error_tracking: true,
-  public_url: "https://us.i.posthog.com",
+  api_host: "https://us.i.posthog.com",
   api_key: "phc_asdf"
   ...
 ```
@@ -22,7 +22,7 @@ to your application tree with its own configuration:
 config :posthog, enable: false
 
 config :my_app, :posthog,
-  public_url: "https://us.i.posthog.com",
+  api_host: "https://us.i.posthog.com",
   api_key: "phc_asdf"
 
 # application.ex
@@ -32,7 +32,7 @@ defmodule MyApp.Application do
 
   def start(_type, _args) do
     posthog_config = Application.fetch_env!(:my_app, :posthog) |> PostHog.Config.validate!()
-    
+
     :logger.add_handler(:posthog, PostHog.Handler, %{config: posthog_config})
 
     children = [
@@ -53,21 +53,21 @@ one of which can be the default one:
 ```elixir
 # config.exs
 config :posthog,
-  public_url: "https://us.i.posthog.com",
+  api_host: "https://us.i.posthog.com",
   api_key: "phc_key1"
 
 config :my_app, :another_posthog,
-  public_url: "https://us.i.posthog.com",
+  api_host: "https://us.i.posthog.com",
   api_key: "phc_key2",
   supervisor_name: AnotherPostHog
-  
+
 # application.ex
 defmodule MyApp.Application do
   use Application
 
   def start(_type, _args) do
     posthog_config = Application.fetch_env!(:my_app, :another_posthog) |> PostHog.Config.validate!()
-    
+
     children = [
       {PostHog.Supervisor, posthog_config}
     ]

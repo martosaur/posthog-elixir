@@ -13,7 +13,7 @@ defmodule PostHog.Case do
 
     config =
       [
-        public_url: "https://us.i.posthog.com",
+        api_host: "https://us.i.posthog.com",
         api_key: "my_api_key",
         api_client_module: PostHog.API.Mock,
         supervisor_name: context[:test],
