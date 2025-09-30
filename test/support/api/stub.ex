@@ -2,7 +2,7 @@ defmodule PostHog.API.Stub do
   @behaviour PostHog.API.Client
 
   @impl PostHog.API.Client
-  def client(_api_key, _public_url) do
+  def client(_api_key, _api_host) do
     %PostHog.API.Client{client: :stub_client, module: PostHog.API.Mock}
   end
 

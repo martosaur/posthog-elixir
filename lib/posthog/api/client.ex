@@ -6,13 +6,13 @@ defmodule PostHog.API.Client do
   example just in case:
 
   ## Example
-    
+
       > client = PostHog.API.Client.client("phc_abcdedfgh", "https://us.i.posthog.com")
       %PostHog.API.Client{
         client: %Req.Request{...},
         module: PostHog.API.Client
       }
-      
+
       > client.module.request(client.client, :post, "/flags", json: %{distinct_id: "user123"}, params: %{v: 2, config: true})
       {:ok, %Req.Response{status: 200, body: %{...}}}
   """
@@ -46,9 +46,9 @@ defmodule PostHog.API.Client do
               response()
 
   @impl __MODULE__
-  def client(api_key, public_url) do
+  def client(api_key, api_host) do
     client =
-      Req.new(base_url: public_url)
+      Req.new(base_url: api_host)
       |> Req.Request.put_private(:api_key, api_key)
 
     %__MODULE__{client: client, module: __MODULE__}
