@@ -207,8 +207,7 @@ cp config/integration.example.exs config/integration.exs
 mix test --only integration
 ```
 
-If you want to play with PostHog events in IEx, you'll need to create
-`config/dev.exs` and configure your dev instance to your liking. Here a
+If you want to play with PostHog events in IEx, you'll need to tweak your local `config/dev.exs` pointing it to the instance of your liking. Here a
 minimal example:
 
 ```elixir

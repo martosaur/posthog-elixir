@@ -30,5 +30,4 @@ posthog-*.tar
 .DS_Store
 
 # Local Config
-config/dev.exs
 config/integration.exs
