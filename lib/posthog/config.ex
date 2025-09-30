@@ -1,3 +1,12 @@
+# `Logger.levels/0` is not available in Elixir 1.15.0 so let's backport it
+# TODO: Remove this once we drop support for Elixir 1.15.0
+logger_levels =
+  if function_exported?(Logger, :levels, 0) do
+    Logger.levels()
+  else
+    [:emergency, :alert, :critical, :error, :warning, :warn, :notice, :info, :debug]
+  end
+
 defmodule PostHog.Config do
   @shared_schema [
     test_mode: [
@@ -38,7 +47,7 @@ defmodule PostHog.Config do
                               "List of Logger metadata keys to include in event properties. Set to `:all` to include all metadata. This only affects Error Tracking events."
                           ],
                           capture_level: [
-                            type: {:or, [{:in, Logger.levels()}, nil]},
+                            type: {:or, [{:in, logger_levels}, nil]},
                             default: :error,
                             doc:
                               "Minimum level for logs that should be captured as errors. Errors with `crash_reason` are always captured."
