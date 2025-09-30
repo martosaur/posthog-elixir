@@ -1011,7 +1011,9 @@ defmodule PostHog.HandlerTest do
              port: "#Port<" <> _
            } = maybe_encoded
 
-    JSON.encode!(maybe_encoded)
+    # Guarantee it's serializable
+    # TODO: Migrate to JSON.encode! once we move to Elixir 1.18+
+    assert LoggerJSON.Formatter.RedactorEncoder.encode(maybe_encoded)
   end
 
   @tag config: [metadata: [:extra]]
