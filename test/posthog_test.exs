@@ -67,9 +67,7 @@ defmodule PostHogTest do
                timestamp: _
              } = event
 
-      # Guarantee it's serializable
-      # TODO: Migrate to JSON.encode! once we move to Elixir 1.18+
-      assert LoggerJSON.Formatter.RedactorEncoder.encode(event, [])
+      Jason.encode!(event)
     end
 
     @tag config: [supervisor_name: CustomPostHog]
@@ -121,13 +119,11 @@ defmodule PostHogTest do
       assert %{
                event: "case tested",
                distinct_id: "distinct_id",
-               properties: %{struct: %{hello: nil}, ref: _},
+               properties: %{struct: %{hello: nil}, ref: _} = properties,
                timestamp: _
              } = event
 
-      # Guarantee it's serializable
-      # TODO: Migrate to JSON.encode! once we move to Elixir 1.18+
-      assert LoggerJSON.Formatter.RedactorEncoder.encode(event, [])
+      Jason.encode!(properties)
     end
   end
 
