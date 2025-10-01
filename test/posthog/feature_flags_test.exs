@@ -1,6 +1,7 @@
 defmodule PostHog.FeatureFlagsTest do
-  # group only works for Elixir 1.18, can't make it async until then
-  use PostHog.Case, async: false, group: PostHog
+  use PostHog.Case,
+    async: Version.match?(System.version(), ">= 1.18.0"),
+    group: PostHog
 
   @moduletag config: [supervisor_name: PostHog]
 
