@@ -1,4 +1,8 @@
 defmodule PostHog do
+  @moduledoc """
+  Main API for working with PostHog
+  """
+
   @typedoc "Name under which an instance of PostHog supervision tree is registered."
   @type supervisor_name() :: atom()
 
@@ -13,6 +17,7 @@ defmodule PostHog do
 
   Note that it __must__ be JSON-serializable.
   """
+
   @type properties() :: %{optional(String.t()) => any(), optional(atom()) => any()}
 
   @doc """

@@ -1,4 +1,5 @@
 defmodule PostHog.API.Stub do
+  @moduledoc false
   @behaviour PostHog.API.Client
 
   @impl PostHog.API.Client
