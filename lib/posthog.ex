@@ -6,7 +6,7 @@ defmodule PostHog do
   @typedoc "Name under which an instance of PostHog supervision tree is registered."
   @type supervisor_name() :: atom()
 
-  @typedoc "Event name, such as `\"user_signed_up\"` or `\"$create_alias\"`"
+  @typedoc ~S(Event name, such as `"user_signed_up"` or `"$create_alias"`)
   @type event() :: String.t()
 
   @typedoc "string representing distinct ID"
