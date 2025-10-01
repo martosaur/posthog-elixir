@@ -52,6 +52,7 @@ defmodule PostHog.Integrations.Plug do
 
   defp remote_ip(conn) when is_struct(conn, Plug.Conn) do
     # Avoid compilation warnings for cases where Plug isn't available
+    # credo:disable-for-lines:2
     remote_ip =
       case apply(Plug.Conn, :get_req_header, [conn, "x-forwarded-for"]) do
         [x_forwarded_for | _] ->
