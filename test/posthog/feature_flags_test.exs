@@ -1,5 +1,6 @@
 defmodule PostHog.FeatureFlagsTest do
-  use PostHog.Case, async: true, group: PostHog
+  # group only works for Elixir 1.18, can't make it async until then
+  use PostHog.Case, async: false, group: PostHog
 
   @moduletag config: [supervisor_name: PostHog]
 
