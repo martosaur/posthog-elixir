@@ -9,7 +9,7 @@ Huge thanks to community member [@martosaur](https://github.com/martosaur) for c
 
 ### What's new
 
-- Elixir v1.15+ required
+- Elixir v1.17+ required
 - Event capture is now offloaded to background workers with automatic batching
 - [Context](README.md#context) mechanism for easier property propagation
 - [Error Tracking](README.md#error-tracking) support
