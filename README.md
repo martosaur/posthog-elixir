@@ -207,13 +207,16 @@ cp config/integration.example.exs config/integration.exs
 mix test --only integration
 ```
 
-If you want to play with PostHog events in IEx, you'll need to tweak your local `config/dev.exs` pointing it to the instance of your liking. Here a
-minimal example:
+If you want to play with PostHog events in IEx, just create
+`config/dev.override.exs` and tweak it to point to the instance of your liking.
+This config will be gitignored. Here's a minimal example:
 
 ```elixir
+# config/dev.override.exs
 import Config
 
 config :posthog,
+  enable: true
   api_host: "https://us.i.posthog.com",
   api_key: "phc_XXXX"
 ```

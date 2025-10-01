@@ -1,5 +1,5 @@
 import Config
 
-config :posthog, enable: false, test_mode: true
+config :posthog, enable: false
 
-if File.exists?("config/integration.exs"), do: import_config("integration.exs")
+if File.exists?("config/dev.override.exs"), do: import_config("dev.override.exs")

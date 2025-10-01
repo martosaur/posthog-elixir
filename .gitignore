@@ -31,3 +31,4 @@ posthog-*.tar
 
 # Local Config
 config/integration.exs
+config/dev.override.exs
