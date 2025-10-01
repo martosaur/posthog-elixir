@@ -2,9 +2,44 @@
 
 This is a migration guide for all major version bumps
 
-## v0-v1
+## v1 -> v2
 
-When we stabilized our library, we decided to pull some breaking changes, here are they and how you can migrate:
+Version 2.0 is a whole new library, so we encourage you to use this upgrade as
+an opportunity to revisit your PostHog usage in your application. Even the root
+level module was renamed from `Posthog` to `PostHog`.
+
+### Configuration
+
+Configuration has been completely reworked. We advise you to remove your
+existing configuration and follow [Getting Started](README.md#getting-started)
+section for setup.
+
+### Event Capture
+
+`PostHog.capture` signature has changed. It now accepts properties only as a
+map. `distinct_id` is now included in the properties.
+
+```elixir
+PostHog.capture("user_signed_up", %{
+  distinct_id: "distinct_id_of_the_user",
+  login_type: "email",
+  is_free_trial: true
+})
+```
+
+No additional options can be passed. PostHog now automatically offloads events to a
+pool of sender workers that will batch and send your events. This also means
+that `Posthog.batch` doesn't exist anymore and you should simply call `capture/2` for each of your events.
+
+### Feature Flags
+
+`Posthog.feature_flag` and `Posthog.feature_flag_enabled` functions were
+replaced with `PostHog.FeatureFlags` module. Check its docs for the new usage
+guidelines.
+
+## v0 -> v1
+
+When we stabilized our library, we decided to pull some breaking changes.
 
 ### Minimum Elixir version bumped to v1.14
 
@@ -15,14 +50,14 @@ The library previously supported Elixir v1.12+. You'll need to migrate to Elixir
 
 ### Decide v4 - Feature Flags
 
-PostHog is consistently upgrading our internal data representation so that's better for customers each and every time. We've recently launched a new version of our `/decide` endpoint called `v4`. This endpoint is slightly different, which caused a small change in behavior for our flags.
+PostHog is consistently upgrading our internal data representation so that it's better for users each and every time. We've recently launched a new version of our `/decide` endpoint called `v4`. This endpoint is slightly different, which caused a small change in behavior for our flags.
 
-`Posthog.FeatureFlag` previously included a key `value` that to represent the internal structure of a flag. It was renamed to `payload` to:
+`PostHog.FeatureFlag` previously included a key `value` to represent the internal structure of a flag. It was renamed to `payload` to:
 
 1. better represent the fact that it can be both an object and a boolean
 2. align it more closely with our other SDKs
 
-### Posthog.Application
+### PostHog.Application
 
 This library now depends on `Cachex`, and includes a supervision tree. There are 2 options:
 
@@ -39,7 +74,7 @@ def application do
   end
 ```
 
-2. Or, if you're already using an Application, you can add add `Posthog.Application` to your own supervision tree:
+2. Or, if you're already using an Application, you can add `Posthog.Application` to your own supervision tree:
 
 ```elixir
 # lib/my_app/application.ex
@@ -49,7 +84,7 @@ defmodule MyApp.Application do
   def start(_type, _args) do
     children = [
       # Your other children...
-      {Posthog.Application, []}
+      {PostHog.Application, []}
     ]
 
     opts = [strategy: :one_for_one, name: MyApp.Supervisor]
@@ -58,32 +93,32 @@ defmodule MyApp.Application do
 end
 ```
 
-### `Posthog.capture` new signature
+### `PostHog.capture` new signature
 
-The signature to `Posthog.capture` has changed. `distinct_id` is now a required argument.
+The signature to `PostHog.capture` has changed. `distinct_id` is now a required argument.
 
 Here are some examples on how the method is now used:
 
 ```elixir
 # Basic event with `event` and `distinct_id`, both required
-Posthog.capture("page_view", "user_123")
+PostHog.capture("page_view", "user_123")
 
 # Event with properties
-Posthog.capture("purchase", "user_123", %{
+PostHog.capture("purchase", "user_123", %{
     product_id: "prod_123",
     price: 99.99,
     currency: "USD"
 })
 
 # Event with custom timestamp
-Posthog.capture("signup_completed", "user_123", %{}, timestamp: DateTime.utc_now())
+PostHog.capture("signup_completed", "user_123", %{}, timestamp: DateTime.utc_now())
 
 # Event with custom UUID
 uuid = "..."
-Posthog.capture("signup_completed", "user_123", %{}, uuid: uuid)
+PostHog.capture("signup_completed", "user_123", %{}, uuid: uuid)
 
 # Event with custom headers
-Posthog.capture(
+PostHog.capture(
   "login",
   "user_123",
   %{},

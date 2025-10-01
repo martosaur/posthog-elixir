@@ -1,3 +1,23 @@
+## 2.0.0 - 2025-09-30
+
+### Major Release
+
+`posthog-elixir` was fully reworked. Check [migration guide](MIGRATION.md#v1-v2)
+for some tips on how to upgrade.
+
+Huge thanks to community member [@martosaur](https://github.com/martosaur) for contributing this new version.
+
+### What's new
+
+- Elixir v1.17+ required
+- Event capture is now offloaded to background workers with automatic batching
+- [Context](README.md#context) mechanism for easier property propagation
+- [Error Tracking](README.md#error-tracking) support
+- New `PostHog.FeatureFlags` module for working with feature flags
+- [Test mode](`PostHog.Test`) for easier testing
+- Customizable [HTTP client](`PostHog.API.Client`) with Req as the default
+- [Plug integration](`PostHog.Integrations.Plug`) for automatically capturing common HTTP properties
+
 ## 1.1.0 - 2025-07-01
 
 - Expose `capture/2` `b077aba849126c63f1c7a82b6ad9d21945871a4a`
@@ -27,7 +47,7 @@
 - PostHog now requires you to initialize `Posthog.Application` alongside your supervisor tree. This is required because of our `Cachex` system to properly track your FF usage.
   - We'll also include local evaluation in the near term, which will also require a GenServer, therefore, requiring us to use a Supervisor.
 - Added `enabled_capture` configuration option to disable PostHog tracking in development/test environments
-- `Posthog.capture` now requires `distinct_id` as a required second argument
+- `PostHog.capture` now requires `distinct_id` as a required second argument
 
 ## 0.4.4 - 2025-04-14
 

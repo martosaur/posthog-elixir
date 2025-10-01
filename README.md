@@ -1,321 +1,222 @@
-# PostHog Elixir Client
+# PostHog Elixir SDK
 
 [![Hex.pm](https://img.shields.io/hexpm/v/posthog.svg)](https://hex.pm/packages/posthog)
 [![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/posthog)
 
-A powerful Elixir client for [PostHog](https://posthog.com), providing seamless integration with PostHog's analytics and feature flag APIs.
+A powerful Elixir SDK for [PostHog](https://posthog.com)
 
 ## Features
 
-- Event Capture: Track user actions and custom events
-- Feature Flags: Manage feature flags and multivariate tests
-- Batch Processing: Send multiple events efficiently
-- Custom Properties: Support for user, group, and person properties
-- Flexible Configuration: Customizable JSON library and API version
-- Environment Control: Disable tracking in development/test environments
-- Configurable HTTP Client: Customizable timeouts, retries, and HTTP client implementation
+- Analytics and Feature Flags support
+- Error tracking support
+- Powerful process-based context propagation
+- Asynchronous event sending with built-in batching
+- Overridable HTTP client
+- Support for multiple PostHog projects
 
-## Installation
+## Getting Started
 
-Add `posthog` to your list of dependencies in `mix.exs`:
+Add `PostHog` to your dependencies:
 
 ```elixir
 def deps do
   [
-    {:posthog, "~> 1.0"}
+    {:posthog, "~> 2.0"}
   ]
 end
 ```
 
-## Configuration
-
-Add your PostHog configuration to your application's config:
+Configure the `PostHog` application environment:
 
 ```elixir
-# config/config.exs
 config :posthog,
-  api_url: "https://us.posthog.com",  # Or `https://eu.posthog.com` or your self-hosted PostHog instance URL
-  api_key: "phc_your_project_api_key"
-
-# Optional configurations
-config :posthog,
-  json_library: Jason,   # Default JSON parser (optional)
-  enabled_capture: true, # Whether to enable PostHog tracking (optional, defaults to true)
-  http_client: Posthog.HTTPClient.Hackney,  # Default HTTP client (optional)
-  http_client_opts: [    # HTTP client options (optional)
-    timeout: 5_000,      # Request timeout in milliseconds (default: 5_000)
-    retries: 3,          # Number of retries on failure (default: 3)
-    retry_delay: 1_000   # Delay between retries in milliseconds (default: 1_000)
-  ]
+  enable: true,
+  enable_error_tracking: true,
+  api_host: "https://us.i.posthog.com", # Or `https://eu.posthog.com` or your self-hosted PostHog instance URL
+  api_key: "phc_my_api_key",
+  in_app_otp_apps: [:my_app]
 ```
 
-### HTTP Client Configuration
-
-The library uses Hackney as the default HTTP client, but you can configure its behavior or even swap it for a different implementation by simply implementing the `Posthog.HTTPClient` behavior:
+For test environment, you want to enable test_mode:
 
 ```elixir
-# config/config.exs
 config :posthog,
-  # Use a different HTTP client implementation
-  http_client: MyCustomHTTPClient,
-
-  # Configure HTTP client options
-  http_client_opts: [
-    timeout: 10_000,   # 10 seconds timeout
-    retries: 5,        # 5 retries
-    retry_delay: 2_000 # 2 seconds between retries
-  ]
+  test_mode: true
 ```
 
-For testing, you might want to use a mock HTTP client:
+Optionally, enable [Plug integration](`PostHog.Integrations.Plug`).
+
+You're all set! 🎉 For more information on configuration, check the `PostHog.Config` module
+documentation and the [advanced configuration guide](advanced-configuration.md).
+
+## Capturing Events
+
+To capture an event, use `PostHog.capture/2`:
 
 ```elixir
-# test/support/mocks.ex
-defmodule Posthog.HTTPClient.Test do
-  @behaviour Posthog.HTTPClient
-
-  def post(url, body, headers, _opts) do
-    # Return mock responses for testing
-    {:ok, %{status: 200, headers: [], body: %{}}}
-  end
-end
-
-# config/test.exs
-config :posthog,
-  http_client: Posthog.HTTPClient.Test
+iex> PostHog.capture("user_signed_up", %{distinct_id: "distinct_id_of_the_user"})
 ```
 
-### Disabling PostHog capture
-
-You can disable PostHog tracking by setting `enabled_capture: false` in your configuration. This is particularly useful in development or test environments where you don't want to send actual events to PostHog.
-
-When `enabled_capture` is set to `false`:
-
-- All `Posthog.capture/3` and `Posthog.batch/2` calls will succeed silently
-- PostHog will still communicate with the server for Feature Flags
-
-This is useful for:
-
-- Development and test environments where you don't want to pollute your PostHog instance
-- Situations where you need to temporarily disable tracking
-
-Example configuration for development:
+You can pass additional properties in the last argument:
 
 ```elixir
-# config/dev.exs
-config :posthog,
-  enabled_capture: false  # Disable tracking in development
-```
-
-Example configuration for test:
-
-```elixir
-# config/test.exs
-config :posthog,
-  enabled_capture: false  # Disable tracking in test environment
-```
-
-## Usage
-
-### Capturing Events
-
-Simple event capture:
-
-```elixir
-# Basic event with `event` and `distinct_id`, both required
-Posthog.capture("page_view", "user_123")
-
-# Event with properties
-Posthog.capture("purchase", "user_123", %{
-    product_id: "prod_123",
-    price: 99.99,
-    currency: "USD"
+iex> PostHog.capture("user_signed_up", %{
+  distinct_id: "distinct_id_of_the_user",
+  login_type: "email",
+  is_free_trial: true
 })
-
-# Event with custom timestamp
-Posthog.capture("signup_completed", "user_123", %{}, timestamp: DateTime.utc_now())
-
-# Event with custom UUID
-uuid = "..."
-Posthog.capture("signup_completed", "user_123", %{}, uuid: uuid)
-
-# Event with custom headers
-Posthog.capture(
-  "login",
-  "user_123",
-  %{},
-  headers: [{"x-forwarded-for", "127.0.0.1"}]
-)
 ```
 
-### Batch Processing
+## Special Events
 
-Send multiple events in a single request:
+`PostHog.capture/2` is very powerful and allows you to send events that have
+special meaning. For example:
+
+### Create Alias
 
 ```elixir
-events = [
-  {"page_view", "user_123", %{}},
-  {"button_click", "user_123", %{button_id: "signup"}}
-]
-
-Posthog.batch(events)
+iex> PostHog.capture("$create_alias", %{distinct_id: "frontend_id", alias: "backend_id"})
 ```
 
-### Setting person properties
-
-Setting person properties in our Elixir SDK is slightly more complicated than it is in other SDKs because we don't support auxiliary/conveniency methods yet. You can, however, achieve the same behavior by triggering a `$set` event manually
+### Group Analytics
 
 ```elixir
-Posthog.capture(
-  "$set",
-  "user_123",
-  %{ "$set": %{ firstName: "Max", lastName: "The Hedgehog" } }
-)
+iex> PostHog.capture("$groupidentify", %{
+  distinct_id: "static_string_used_for_all_group_events",
+  "$group_type": "company",
+  "$group_key": "company_id_in_your_db"
+})
 ```
 
-### Setting group properties
+## Context
 
-Setting group properties in our Elixir SDK is slightly more complicated than it is in other SDKs because we don't support auxiliary/conveniency methods yet. You can, however, achieve the same behavior by triggering a `$groupidentify` event manually
+Carrying `distinct_id` around all the time might not be the most convenient
+approach, so `PostHog` lets you store it and other properties in a _context_.
+The context is stored in the `Logger` metadata, and PostHog will automatically
+attach these properties to any events you capture with `PostHog.capture/3`, as long as they
+happen in the same process.
 
 ```elixir
-Posthog.capture(
-  "$groupidentify",
-  "user_123",
-  %{
-    "$group_type": "organization",
-    "$group_key": "orgid_12345",
-    "$group_set": %{ "group_property_key": "group_property_value" }
-  }
-)
+iex> PostHog.set_context(%{distinct_id: "distinct_id_of_the_user"})
+iex> PostHog.capture("page_opened")
 ```
 
-### Feature Flags
-
-Get all feature flags for a user:
+You can scope context by event name. In this case, it will only be attached to a specific event:
 
 ```elixir
-{:ok, flags} = Posthog.feature_flags("user_123")
-
-# Response format:
-# %{
-#   "featureFlags" => %{"flag-1" => true, "flag-2" => "variant-b"},
-#   "featureFlagPayloads" => %{
-#     "flag-1" => true,
-#     "flag-2" => %{"color" => "blue", "size" => "large"}
-#   }
-# }
+iex> PostHog.set_event_context("sensitive_event", %{"$process_person_profile": false})
 ```
 
-Check specific feature flag:
+You can always inspect the context:
 
 ```elixir
-# Boolean feature flag
-{:ok, flag} = Posthog.feature_flag("new-dashboard", "user_123")
-# Returns: %Posthog.FeatureFlag{name: "new-dashboard", payload: true, enabled: true}
-
-# Multivariate feature flag
-{:ok, flag} = Posthog.feature_flag("pricing-test", "user_123")
-# Returns: %Posthog.FeatureFlag{
-#   name: "pricing-test",
-#   payload: %{"price" => 99, "period" => "monthly"},
-#   enabled: "variant-a"
-# }
-
-# Quick boolean check
-if Posthog.feature_flag_enabled?("new-dashboard", "user_123") do
-  # Show new dashboard
-end
+iex> PostHog.get_context()
+%{distinct_id: "distinct_id_of_the_user"}
+iex> PostHog.get_event_context("sensitive_event")
+%{distinct_id: "distinct_id_of_the_user", "$process_person_profile": true}
 ```
 
-Feature flags with group properties:
+## Feature Flags
+
+`PostHog.FeatureFlags.check/2` is the main function for checking a feature flag.
 
 ```elixir
-Posthog.feature_flags("user_123",
-  groups: %{company: "company_123"},
-  group_properties: %{company: %{industry: "tech"}},
-  person_properties: %{email: "user@example.com"}
-)
+# Simple boolean feature flag
+iex> PostHog.FeatureFlags.check("example-feature-flag-1", "user123")
+{:ok, true}
+
+# Note how it automatically sets `$feature/example-feature-flag-1` property in the context
+iex> PostHog.get_context()
+%{"$feature/example-feature-flag-1" => true}
+
+# It will attempt to take distinct_id from the context if it's not provided
+iex> PostHog.set_context(%{distinct_id: "user123"})
+:ok
+iex> PostHog.FeatureFlags.check("example-feature-flag-1")
+{:ok, true}
+
+# You can also pass a map with body parameters that will be sent to the /flags API as-is
+iex> PostHog.FeatureFlags.check("example-feature-flag-1", %{distinct_id: "user123", groups: %{group_type: "group_id"}})
+{:ok, true}
+
+# It returns variant if it's set
+iex> PostHog.FeatureFlags.check("example-feature-flag-2", "user123")
+{:ok, "variant2"}
+
+# Returns error if feature flag doesn't exist
+iex> PostHog.FeatureFlags.check("example-feature-flag-3", "user123")
+{:error, %PostHog.UnexpectedResponseError{message: "Feature flag example-feature-flag-3 was not found in the response", response: ...}}
 ```
 
-#### Stop sending `$feature_flag_called`
-
-We automatically send `$feature_flag_called` events so that you can properly keep track of which feature flags you're accessing via `Posthog.feature_flag()` calls. If you wanna save some events, you can disable this by adding `send_feature_flag_event: false` to the call:
+If you're feeling adventurous and/or is simply writing a script you can use the `PostHog.FeatureFlags.check!/2` helper instead and it will return a boolean or raise an error.
 
 ```elixir
-# Boolean feature flag
-{:ok, flag} = Posthog.feature_flag("new-dashboard", "user_123", send_feature_flag_event: false)
+# Simple boolean feature flag
+iex> PostHog.FeatureFlags.check!("example-feature-flag-1", "user123")
+true
+
+# Works for variants too
+iex> PostHog.FeatureFlags.check!("example-feature-flag-2", "user123")
+"variant2"
+
+
+# Raises error if feature flag doesn't exist
+iex> PostHog.FeatureFlags.check!("example-feature-flag-3", "user123")
+** (PostHog.UnexpectedResponseError) Feature flag example-feature-flag-3 was not found in the response
 ```
 
-## Local Development
+## Error Tracking
 
-Run `bin/setup` to install development dependencies or run the following commands manually:
+Error Tracking is enabled by default.
 
-We recommend using `asdf` to manage Elixir and Erlang versions:
+![](assets/error-tracking-screenshot.png)
 
-```sh
-# Install required versions
-asdf install
+You can always disable it by setting `enable_error_tracking` to false:
 
-# Install dependencies
+```elixir
+config :posthog, enable_error_tracking: false
+```
+
+## Multiple PostHog Projects
+
+If your app works with multiple PostHog projects, PostHog can accommodate you. For
+setup instructions, consult the [advanced configuration guide](guides/advanced-configuration.md).
+
+## Developing locally
+
+You should be able to fetch dependencies and run tests right away:
+
+```
 mix deps.get
-mix compile
+mix test
 ```
 
-Run tests:
+To run integration test suite that sends real events to the API:
 
-```sh
-bin/test
+1. Create a test PostHog project and obtain an API key.
+2. Create `config/integration.exs` config that will be used for integration tests:
+
+```
+cp config/integration.example.exs config/integration.exs
 ```
 
-(This runs `mix test`).
+3. Put API key into `config/integration.exs`
+4. Run integration tests
 
-Format code:
-
-```sh
-bin/fmt
+```
+mix test --only integration
 ```
 
-### Troubleshooting
+If you want to play with PostHog events in IEx, just create
+`config/dev.override.exs` and tweak it to point to the instance of your liking.
+This config will be gitignored. Here's a minimal example:
 
-If you encounter WX library issues during Erlang installation:
+```elixir
+# config/dev.override.exs
+import Config
 
-```sh
-# Disable WX during installation
-export KERL_CONFIGURE_OPTIONS="--without-wx"
+config :posthog,
+  enable: true
+  api_host: "https://us.i.posthog.com",
+  api_key: "phc_XXXX"
 ```
-
-To persist this setting, add it to your shell configuration file (`~/.bashrc`, `~/.zshrc`, or `~/.profile`).
-
-## Examples
-
-There's an example console project in `examples/feature_flag_demo` that shows how to use the client. Follow the instructions in [the README](examples/feature_flag_demo/README.md) to run it.
-
-## Development Tools
-
-This project uses several development tools to maintain code quality and security:
-
-### Credo
-
-Credo is a static code analysis tool that helps enforce coding standards and catch potential issues. Run it with:
-
-```bash
-mix credo --strict
-```
-
-For more detailed output:
-
-```bash
-mix credo --strict --verbose
-```
-
-## Contributing
-
-When contributing to this project, please ensure your code passes all the development tool checks:
-
-1. Run Credo to ensure code style consistency
-2. Run Mix Unused to identify any unused code
-3. Run the test suite with `mix test`
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
