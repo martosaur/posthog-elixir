@@ -179,6 +179,7 @@ defmodule PostHog.SenderTest do
       [{^pid, :busy}] = Registry.lookup(registry, {PostHog.Sender, 1})
       send(pid, :go)
       assert_receive :done
+      :sys.get_status(pid)
       [{^pid, :available}] = Registry.lookup(registry, {PostHog.Sender, 1})
     end
 
