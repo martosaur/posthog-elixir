@@ -121,7 +121,7 @@ defmodule PostHogTest do
       assert %{
                event: "case tested",
                distinct_id: "distinct_id",
-               properties: %{struct: %{hello: nil}, ref: _},
+               properties: %{struct: %{hello: nil}, ref: _} = properties,
                timestamp: _
              } = event
 
