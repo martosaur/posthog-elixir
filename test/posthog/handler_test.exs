@@ -1011,7 +1011,7 @@ defmodule PostHog.HandlerTest do
              port: "#Port<" <> _
            } = maybe_encoded
 
-    JSON.encode!(maybe_encoded)
+    Jason.encode!(maybe_encoded)
   end
 
   @tag config: [metadata: [:extra]]

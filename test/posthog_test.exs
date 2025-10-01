@@ -67,7 +67,7 @@ defmodule PostHogTest do
                timestamp: _
              } = event
 
-      JSON.encode!(event)
+      Jason.encode!(event)
     end
 
     @tag config: [supervisor_name: CustomPostHog]
@@ -123,7 +123,7 @@ defmodule PostHogTest do
                timestamp: _
              } = event
 
-      JSON.encode!(properties)
+      Jason.encode!(properties)
     end
   end
 

@@ -8,7 +8,7 @@ defmodule PostHog.MixProject do
     [
       app: :posthog,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
