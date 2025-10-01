@@ -1,4 +1,8 @@
 defmodule PostHog.FeatureFlags do
+  @moduledoc """
+  Convenience functions to work with Feature Flags API
+  """
+
   @doc """
   Make request to [`/flags`](https://posthog.com/docs/api/flags) API.
 

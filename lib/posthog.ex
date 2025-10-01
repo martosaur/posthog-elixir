@@ -1,8 +1,12 @@
 defmodule PostHog do
+  @moduledoc """
+  Main API for working with PostHog
+  """
+
   @typedoc "Name under which an instance of PostHog supervision tree is registered."
   @type supervisor_name() :: atom()
 
-  @typedoc "Event name, such as `\"user_signed_up\"` or `\"$create_alias\"`"
+  @typedoc ~S(Event name, such as `"user_signed_up"` or `"$create_alias"`)
   @type event() :: String.t()
 
   @typedoc "string representing distinct ID"
@@ -13,6 +17,7 @@ defmodule PostHog do
 
   Note that it __must__ be JSON-serializable.
   """
+
   @type properties() :: %{optional(String.t()) => any(), optional(atom()) => any()}
 
   @doc """

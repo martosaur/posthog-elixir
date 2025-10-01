@@ -3,8 +3,8 @@ defmodule PostHog.SenderTest do
 
   import Mox
 
-  alias PostHog.Sender
   alias PostHog.API
+  alias PostHog.Sender
 
   @supervisor_name __MODULE__
 
